@@ -66,11 +66,15 @@ export class Attract {
     this.bg.drawBase(c)
     drawWorld(c, this.w, this.bg)
     c.restore()
-    c.fillStyle = T.ink
-    c.fillRect(FIELD_X - 6, 0, 6, SCREEN_H)
-    c.fillRect(FIELD_X + PW, 0, 6, SCREEN_H)
-    c.fillStyle = T.ember
-    c.fillRect(FIELD_X - 10, 0, 2, SCREEN_H)
-    c.fillRect(FIELD_X + PW + 8, 0, 2, SCREEN_H)
   }
+}
+
+/** Ink + ember rules framing the playfield on the paper layer. */
+export function drawFieldFrame(c: CanvasRenderingContext2D) {
+  c.fillStyle = T.ink
+  c.fillRect(FIELD_X - 6, 0, 6, SCREEN_H)
+  c.fillRect(FIELD_X + PW, 0, 6, SCREEN_H)
+  c.fillStyle = T.ember
+  c.fillRect(FIELD_X - 10, 0, 2, SCREEN_H)
+  c.fillRect(FIELD_X + PW + 8, 0, 2, SCREEN_H)
 }

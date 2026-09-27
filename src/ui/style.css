@@ -3,7 +3,9 @@
 html, body { margin: 0; height: 100%; background: #e9e3d4; overflow: hidden; }
 body { font-family: var(--fontHead); color: var(--ink); -webkit-font-smoothing: antialiased; user-select: none; }
 #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-#game { display: block; background: var(--paper); box-shadow: 0 10px 40px rgba(40, 30, 10, 0.18); }
+#screen { position: relative; box-shadow: 0 10px 40px rgba(40, 30, 10, 0.18); background: var(--paper); }
+#hud { display: block; }
+#game { position: absolute; top: 0; display: block; }
 #ui { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: 0 0; pointer-events: none; }
 #ui > * { pointer-events: auto; }
 .hide-cursor { cursor: none; }

@@ -97,7 +97,7 @@ export function settingsModal(app: App, onClose: () => void = () => app.closeMod
     rows.push({ el, left: () => step(-0.1), right: () => step(0.1), click: () => step(0.1) })
     body.append(el)
   }
-  const choice = <T extends string | boolean>(label: string, opts: [T, string][], get: () => T, set: (v: T) => void) => {
+  const choice = <T extends string | boolean | number>(label: string, opts: [T, string][], get: () => T, set: (v: T) => void) => {
     const val = h('span', { class: 'val' })
     const refresh = () => { val.textContent = opts.find(([v]) => v === get())?.[1] ?? '' }
     const el = h('div', { class: 'setting nav' }, h('span', null, label), val)
@@ -117,6 +117,7 @@ export function settingsModal(app: App, onClose: () => void = () => app.closeMod
   choice('Effects', [['high', 'High'], ['low', 'Low']], () => s.effects, (v) => (s.effects = v))
   choice('Always fire', [[false, 'Off — hold fire'], [true, 'On']], () => s.alwaysFire, (v) => (s.alwaysFire = v))
   choice('Show FPS', [[false, 'Off'], [true, 'On']], () => s.showFps, (v) => (s.showFps = v))
+  choice('Frame rate', [[60, '60 fps — cooler laptop'], [0, 'Display refresh']], () => s.fpsCap, (v) => (s.fpsCap = v))
   const full = h('div', { class: 'setting nav' }, h('span', null, 'Fullscreen'), h('span', { class: 'val' }, 'Toggle'))
   full.addEventListener('click', () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen() })
   body.append(full)

@@ -1,4 +1,4 @@
-import { Renderer, drawWorld } from './render/renderer'
+import { Renderer } from './render/renderer'
 import { drawHud, drawHudOverlays } from './render/hud'
 import { input } from './core/input'
 import { audio } from './audio/audio'
@@ -12,7 +12,9 @@ import { Nav } from './ui/nav'
 import { titleScreen, briefingScreen, pauseScreen, failedScreen, resultsScreen, endingScreen, settingsModal, difficultyModal } from './ui/screens'
 import { hangarScreen } from './ui/hangar'
 import { Attract } from './ui/attract'
-import { SCREEN_W, SCREEN_H, FIELD_X, PW, PH } from './game/consts'
+import { SCREEN_W, SCREEN_H } from './game/consts'
+import { T } from './ui/theme'
+import { drawFieldFrame } from './ui/attract'
 import { installDebug } from './debug'
 
 export interface Screen {
@@ -46,7 +48,7 @@ export class App {
   missionStartCampaign: Campaign | null = null
 
   constructor() {
-    this.renderer = new Renderer(document.getElementById('game') as HTMLCanvasElement)
+    this.renderer = new Renderer(document.getElementById('game') as HTMLCanvasElement, document.getElementById('hud') as HTMLCanvasElement)
     this.ui = document.getElementById('ui')!
     this.settings = save.loadSettings()
     this.records = save.loadRecords()
@@ -62,6 +64,13 @@ export class App {
     window.addEventListener('keydown', unlock)
     window.addEventListener('pointerdown', unlock)
     window.addEventListener('blur', () => { if (this.session && this.session.state === 'play' && !this.paused) this.pause() })
+    // Hidden tab: stop the music synth too, it is the most expensive thing running.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.session && this.session.state === 'play' && !this.paused) this.pause()
+        audio.setPaused(true)
+      } else if (!this.paused) audio.setPaused(false)
+    })
     this.debug = new URLSearchParams(location.search).has('debug') || import.meta.env.DEV && new URLSearchParams(location.search).has('dev')
     if (this.debug) installDebug(this)
     this.toTitle()
@@ -249,6 +258,9 @@ export class App {
 
   private frame(t: number) {
     requestAnimationFrame((tt) => this.frame(tt))
+    // 120 Hz displays would otherwise render twice as often for no gameplay benefit.
+    const cap = this.settings.fpsCap
+    if (cap > 0 && this.last && t - this.last < 1000 / cap - 2) return
     let dt = this.last ? (t - this.last) / 1000 : 1 / 60
     this.last = t
     dt = Math.min(dt, 1 / 20)
@@ -282,27 +294,43 @@ export class App {
       this.attract.update(dt)
     }
     const t1 = performance.now()
-    this.render()
+    this.render(dt)
     this.perf.render = this.perf.render * 0.95 + (performance.now() - t1) * 0.05
   }
 
-  private render() {
+  private hudT = 0
+  private hudKey = ''
+  private fieldPausedDrawn = false
+
+  private render(dt: number) {
     const r = this.renderer
-    const c = r.begin()
     const s = this.session
-    if (s && (this.screen?.backdrop === 'game')) {
+    const mode = s && this.screen?.backdrop === 'game' ? 'game' : this.attract && this.screen?.backdrop === 'attract' ? 'attract' : 'paper'
+    const key = `${mode}|${r.generation}`
+    const hudStale = key !== this.hudKey
+    this.hudKey = key
+    r.showField(mode !== 'paper')
+    if (mode === 'game' && s) {
       s.hud.bank = this.campaign?.credits ?? 0
-      drawHud(c, s.world, s.hud)
+      // Side panels change slowly: 20 Hz is plenty and saves a full-screen repaint per frame.
+      this.hudT -= dt
+      if (hudStale || this.hudT <= 0 || this.paused) {
+        if (!(this.paused && this.fieldPausedDrawn)) drawHud(r.beginHud(), s.world, s.hud)
+        this.hudT = 1 / 20
+      }
+      if (this.paused && this.fieldPausedDrawn) return
       r.drawField(s.world, s.bg)
       drawHudOverlays(r.begin(), s.world, s.hud)
-    } else if (this.attract && this.screen?.backdrop === 'attract') {
-      c.fillStyle = '#f4f0e6'
-      c.fillRect(0, 0, SCREEN_W, SCREEN_H)
-      this.attract.draw(c)
-    } else {
-      c.fillStyle = '#f4f0e6'
-      c.fillRect(0, 0, SCREEN_W, SCREEN_H)
+      this.fieldPausedDrawn = this.paused
+      return
     }
-    void FIELD_X; void PW; void PH; void drawWorld
+    this.fieldPausedDrawn = false
+    if (hudStale) {
+      const h = r.beginHud()
+      h.fillStyle = T.paper
+      h.fillRect(0, 0, SCREEN_W, SCREEN_H)
+      if (mode === 'attract') drawFieldFrame(h)
+    }
+    if (mode === 'attract' && this.attract) this.attract.draw(r.begin())
   }
 }

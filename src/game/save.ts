@@ -11,6 +11,8 @@ export interface Settings {
   effects: 'high' | 'low'
   alwaysFire: boolean
   showFps: boolean
+  /** 0 = uncapped (render at display refresh). */
+  fpsCap: 60 | 0
 }
 
 export interface Records {
@@ -20,7 +22,7 @@ export interface Records {
   secretsEver: string[]
 }
 
-export const DEFAULT_SETTINGS: Settings = { master: 0.8, music: 0.7, sfx: 0.8, shake: 'full', effects: 'high', alwaysFire: false, showFps: false }
+export const DEFAULT_SETTINGS: Settings = { master: 0.8, music: 0.7, sfx: 0.8, shake: 'full', effects: 'high', alwaysFire: false, showFps: false, fpsCap: 60 }
 const DEFAULT_RECORDS: Records = { bestScore: 0, missionBest: {}, completedDifficulties: [], secretsEver: [] }
 
 const K = { campaign: 'emberline.campaign.v1', settings: 'emberline.settings.v1', records: 'emberline.records.v1' }

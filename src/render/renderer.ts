@@ -10,15 +10,26 @@ import type { Enemy } from '../game/entities'
 import { TAU } from '../core/math'
 import { T } from '../ui/theme'
 
+/**
+ * Two stacked canvases: a full-screen HUD layer that only repaints a few times
+ * per second, and a playfield-sized layer repainted every frame. Redrawing the
+ * whole 1280×720 (×DPR) screen each frame was the dominant GPU cost.
+ */
 export class Renderer {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
+  hud: HTMLCanvasElement
+  hudCtx: CanvasRenderingContext2D
   scale = 1
   showHitboxes = false
+  /** Bumped on resize so layers that paint rarely know to repaint. */
+  generation = 0
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, hud: HTMLCanvasElement) {
     this.canvas = canvas
+    this.hud = hud
     this.ctx = canvas.getContext('2d', { alpha: false })!
+    this.hudCtx = hud.getContext('2d', { alpha: false })!
     this.resize()
     window.addEventListener('resize', () => this.resize())
   }
@@ -28,27 +39,48 @@ export class Renderer {
     const ww = window.innerWidth, wh = window.innerHeight
     const s = Math.min(ww / SCREEN_W, wh / SCREEN_H)
     const cw = Math.floor(SCREEN_W * s), ch = Math.floor(SCREEN_H * s)
-    this.canvas.style.width = `${cw}px`
+    const screen = this.hud.parentElement as HTMLElement
+    screen.style.width = `${cw}px`
+    screen.style.height = `${ch}px`
+    this.hud.style.width = `${cw}px`
+    this.hud.style.height = `${ch}px`
+    this.hud.width = Math.floor(cw * dpr)
+    this.hud.height = Math.floor(ch * dpr)
+    this.scale = this.hud.width / SCREEN_W
+    this.canvas.style.left = `${FIELD_X * s}px`
+    this.canvas.style.width = `${PW * s}px`
     this.canvas.style.height = `${ch}px`
-    this.canvas.width = Math.floor(cw * dpr)
-    this.canvas.height = Math.floor(ch * dpr)
-    this.scale = this.canvas.width / SCREEN_W
+    this.canvas.width = Math.round(PW * this.scale)
+    this.canvas.height = this.hud.height
+    this.generation++
   }
 
-  /** Reset transform to logical 1280×720 space. */
+  /** Playfield layer, in logical 1280×720 coordinates (only the field area is visible). */
   begin() {
     const c = this.ctx
-    c.setTransform(this.scale, 0, 0, this.scale, 0, 0)
+    c.setTransform(this.scale, 0, 0, this.scale, -FIELD_X * this.scale, 0)
     c.imageSmoothingEnabled = true
-    c.imageSmoothingQuality = 'high'
+    c.imageSmoothingQuality = 'medium'
     return c
   }
+
+  /** Full-screen HUD layer, logical 1280×720 coordinates. */
+  beginHud() {
+    const c = this.hudCtx
+    c.setTransform(this.scale, 0, 0, this.scale, 0, 0)
+    c.imageSmoothingEnabled = true
+    c.imageSmoothingQuality = 'medium'
+    return c
+  }
+
+  showField(on: boolean) { this.canvas.style.visibility = on ? 'visible' : 'hidden' }
 
   drawField(w: World, bg: Background | null) {
     const c = this.begin()
     c.save()
     c.translate(FIELD_X, 0)
-    c.beginPath(); c.rect(0, 0, PW, PH); c.clip()
+    c.fillStyle = '#20202a'
+    c.fillRect(0, 0, PW, PH)
     c.translate(w.shakeX, w.shakeY)
     if (bg) bg.drawBase(c)
     else { c.fillStyle = '#20202a'; c.fillRect(-20, -20, PW + 40, PH + 40) }
