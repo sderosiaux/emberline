@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>EMBERLINE — background lab</title>
+<style>
+  body { margin: 0; padding: 16px; background: #eceae6; font: 12px/1.4 ui-monospace, monospace; color: #222; }
+  h2 { font-size: 13px; margin: 18px 0 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .cell { display: flex; flex-direction: column; gap: 4px; }
+  .cell canvas { width: 280px; height: 360px; border: 1px solid #999; background: #000; }
+  .only .cell canvas { width: 560px; height: 720px; }
+  .bar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; min-height: 22px; }
+  button { font: inherit; padding: 1px 6px; }
+  .ms { color: #555; }
+  #props { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .prop { display: flex; flex-direction: column; gap: 2px; }
+  .prop canvas { align-self: flex-start; background: repeating-conic-gradient(#b9b9b9 0 25%, #a5a5a5 0 50%) 0 0 / 20px 20px; }
+</style>
+</head>
+<body>
+<div id="biomes" class="row"></div>
+<h2>props (1×)</h2>
+<div id="props"></div>
+<script type="module" src="./bg-lab.ts"></script>
+</body>
+</html>

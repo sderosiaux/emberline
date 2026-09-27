@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMBERLINE audio lab</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --accent: #e0662b; --accent-soft: #fdeee6; --ok: #2e7d4f; --radius: 10px;
+  }
+  * { box-sizing: border-box }
+  body { margin: 0; font: 14px/1.4 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink) }
+  header { padding: 18px 28px; border-bottom: 1px solid var(--line); background: var(--panel); display: flex; gap: 24px; align-items: center; flex-wrap: wrap }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .04em }
+  header .hint { color: var(--muted) }
+  main { padding: 20px 28px; display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 20px }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px }
+  h3 { font-size: 12px; color: var(--muted); margin: 14px 0 6px; font-weight: 600 }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 7px; padding: 6px 10px; cursor: pointer; transition: background .15s, border-color .15s }
+  button:hover { border-color: var(--accent); background: var(--accent-soft) }
+  button.on { background: var(--accent); border-color: var(--accent); color: #fff }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px }
+  .row { display: flex; align-items: center; gap: 10px; margin: 6px 0 }
+  .row label { width: 70px; color: var(--muted) }
+  input[type=range] { flex: 1; accent-color: var(--accent) }
+  .tracks button { width: 100%; text-align: left; margin-bottom: 4px; display: flex; justify-content: space-between }
+  .tracks small { color: var(--muted) }
+  .status { color: var(--ok); font-variant-numeric: tabular-nums }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr } }
+</style>
+</head>
+<body>
+<header>
+  <h1>EMBERLINE · audio lab</h1>
+  <span class="hint">Click anywhere to unlock audio, then audition tracks and sounds.</span>
+  <span class="status" id="status">locked</span>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Music</h2>
+      <div class="tracks" id="tracks"></div>
+      <h3>Intensity</h3>
+      <div class="grid" id="intensity"></div>
+      <h3>Transport</h3>
+      <div class="grid">
+        <button id="stop">Stop (fade)</button>
+        <button id="pause">Pause</button>
+        <button id="duck">Duck 3 s</button>
+      </div>
+    </section>
+    <section style="margin-top:20px">
+      <h2>Mix</h2>
+      <div class="row"><label>master</label><input id="v-master" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <div class="row"><label>music</label><input id="v-music" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <div class="row"><label>sfx</label><input id="v-sfx" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <h3>Sfx options</h3>
+      <div class="row"><label>pan</label><input id="o-pan" type="range" min="-1" max="1" step="0.05" value="0"></div>
+      <div class="row"><label>pitch</label><input id="o-pitch" type="range" min="0.5" max="2" step="0.05" value="1"></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>Loops</h2>
+      <div class="grid" id="loops"></div>
+      <div class="row"><label>loop pitch</label><input id="l-pitch" type="range" min="0.5" max="2" step="0.01" value="1"></div>
+      <h3>Stress</h3>
+      <div class="grid">
+        <button id="stress-hits">60 hit_small in one frame</button>
+        <button id="stress-fire">Hold fire 15/s (3 s)</button>
+        <button id="stress-war">Firefight (5 s)</button>
+        <button id="credits">Credit streak</button>
+      </div>
+    </section>
+    <section style="margin-top:20px">
+      <h2>Sound effects</h2>
+      <div id="sfx"></div>
+    </section>
+  </div>
+</main>
+<script type="module" src="./audio-lab.ts"></script>
+</body>
+</html>
