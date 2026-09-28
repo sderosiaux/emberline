@@ -1,6 +1,6 @@
 // Music voices: one generic subtractive/FM/formant voice, a chord pad, and a synthesized drum kit.
 
-import { type Ctx, mtof, res } from './core'
+import { type Ctx, mtof, releaseOn, res } from './core'
 import { type Vowel, type Wave, formantBank, noise, osc, tone } from './synth'
 
 export interface OscSpec {
@@ -41,10 +41,12 @@ export function playNote(ctx: Ctx, dest: AudioNode, t: number, dur: number, midi
   g.setTargetAtTime(0, end, P.r / 4)
 
   const head: AudioNode = amp
+  let out: AudioNode = amp
   if (P.vowel) {
     const [fin, fout] = formantBank(ctx, t, P.vowel[0], P.vowel[1], dur, 3)
     fout.connect(dest)
     amp.connect(fin)
+    out = fout
   } else if (P.lp) {
     const lp = ctx.createBiquadFilter()
     lp.type = 'lowpass'
@@ -56,6 +58,7 @@ export function playNote(ctx: Ctx, dest: AudioNode, t: number, dur: number, midi
     lp.frequency.setValueAtTime(top, t)
     if (top !== base) lp.frequency.exponentialRampToValueAtTime(base, t + Math.min(dur, P.lp.dec ?? 0.2))
     amp.connect(lp).connect(dest)
+    out = lp
   } else {
     amp.connect(dest)
   }
@@ -99,6 +102,7 @@ export function playNote(ctx: Ctx, dest: AudioNode, t: number, dur: number, midi
     } else s.connect(head)
     s.start(t)
     s.stop(stop)
+    releaseOn(s, out)
   }
 }
 
@@ -148,6 +152,7 @@ export function playPad(ctx: Ctx, dest: AudioNode, t: number, dur: number, midis
       } else s.connect(mix)
       s.start(t)
       s.stop(stop)
+      releaseOn(s, amp)
     }
   }
 }
@@ -202,6 +207,7 @@ export function playDrum(ctx: Ctx, dest: AudioNode, t: number, d: DrumName, v: n
       g.gain.linearRampToValueAtTime(K.kick.vol * v, t + 0.002)
       g.gain.setTargetAtTime(0, t + 0.02, K.kick.dec / 4)
       s.connect(g).connect(dest)
+      releaseOn(s, g)
       s.start(t)
       s.stop(t + K.kick.dec * 1.8)
       if (K.kick.click > 0) noise(o, t, { dur: 0.012, vol: K.kick.click * v, flt: { type: 'bandpass', f: 2600, q: 0.8 } })
@@ -229,6 +235,7 @@ export function playDrum(ctx: Ctx, dest: AudioNode, t: number, d: DrumName, v: n
       g.gain.setValueAtTime(pk, t + 0.034)
       g.gain.setTargetAtTime(0, t + 0.035, 0.045)
       src.connect(bp).connect(g).connect(dest)
+      releaseOn(src, g)
       src.start(t, Math.random())
       src.stop(t + 0.3)
       return
@@ -256,13 +263,7 @@ export function playDrum(ctx: Ctx, dest: AudioNode, t: number, d: DrumName, v: n
       noise(o, t, { dur: 0.07, a: 0.012, vol: K.shaker.vol * v, flt: { type: 'bandpass', f: 6200, q: 1.1 } })
       return
     case 'b': {
-      const bp = ctx.createBiquadFilter()
-      bp.type = 'bandpass'
-      bp.frequency.value = K.metal.f * 2.2
-      bp.Q.value = 3
-      bp.connect(dest)
-      const md = { ctx, out: bp }
-      for (const r of [1, 1.47, 2.13]) tone(md, t, { w: 'square', f: K.metal.f * r, dur: 0.24, vol: K.metal.vol * v })
+      for (const r of [1, 1.47, 2.13]) tone(o, t, { w: 'square', f: K.metal.f * r, dur: 0.24, vol: K.metal.vol * v, flt: { type: 'bandpass', f: K.metal.f * 2.2, q: 3 } })
       return
     }
   }

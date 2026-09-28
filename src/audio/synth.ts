@@ -1,7 +1,7 @@
 // One-shot building blocks shared by sfx, loops and drums. Each call builds a tiny graph that
 // ends itself (sources stop, then the graph is garbage once unreferenced).
 
-import { type Ctx, res } from './core'
+import { type Ctx, releaseOn, res } from './core'
 
 export type Wave = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'pulse'
 export type Vowel = 'a' | 'e' | 'i' | 'o' | 'u'
@@ -92,6 +92,7 @@ export function tone(d: Dst, t: number, o: ToneOpts): void {
   if (o.flt) head = head.connect(filter(ctx, t, o.flt, o.dur))
   head.connect(env).connect(d.out)
   const stop = t + o.dur + 0.02
+  releaseOn(src, env)
   if (o.vib) {
     const l = osc(ctx, 'sine', o.vib[0])
     const lg = ctx.createGain()
@@ -124,6 +125,7 @@ export function noise(d: Dst, t: number, o: NoiseOpts): void {
   if (o.flt) head = head.connect(filter(ctx, t, o.flt, o.dur))
   if (o.flt2) head = head.connect(filter(ctx, t, o.flt2, o.dur))
   head.connect(env).connect(d.out)
+  releaseOn(src, env)
   src.start(t, Math.random() * 0.4)
   src.stop(t + o.dur + 0.02)
 }
@@ -153,6 +155,7 @@ export function fm(d: Dst, t: number, o: FmOpts): void {
   mod.connect(mg).connect(car.frequency)
   const env = envGain(ctx, t, o.vol, o.a ?? 0.002, o.dur)
   car.connect(env).connect(d.out)
+  releaseOn(car, env)
   const stop = t + o.dur + 0.02
   car.start(t)
   mod.start(t)
@@ -203,6 +206,7 @@ export function formant(d: Dst, t: number, o: FormantOpts): void {
   const env = envGain(ctx, t, o.vol, o.a ?? 0.01, o.dur)
   src.connect(fin)
   fout.connect(env).connect(d.out)
+  releaseOn(src, env)
   const stop = t + o.dur + 0.02
   if (o.vib) {
     const l = osc(ctx, 'sine', o.vib[0])

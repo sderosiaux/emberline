@@ -204,6 +204,13 @@ export function createMixer(ctx: Ctx, dest: AudioNode): Mixer {
   }
 }
 
+/** Detach a finished voice's output from the graph. Chrome keeps every connected node in the
+ *  render graph until it is disconnected or garbage-collected, so per-note subgraphs that are
+ *  merely silent pile up and render cost grows minute after minute. */
+export function releaseOn(src: AudioScheduledSourceNode, out: AudioNode): void {
+  src.onended = () => out.disconnect()
+}
+
 /** Freeze a param at its current automated value so a new ramp starts from there (no jumps). */
 export function holdAt(p: AudioParam, at: number): void {
   if (typeof p.cancelAndHoldAtTime === 'function') p.cancelAndHoldAtTime(at)
