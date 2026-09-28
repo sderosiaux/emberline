@@ -4,6 +4,9 @@ import { BulletKind } from '../entities'
 import { bossDef, startBoss, partDown, phaseShift, alive } from './common'
 import { fan, ring, shell, missile, aimed, spiral } from '../patterns'
 import { PW } from '../consts'
+
+/** Boss scale for the wide field (art is painted at 1×). */
+const S = 1.3
 import { rand, TAU } from '../../core/math'
 import { P, C } from '../../render/particles'
 import { drawSprite, getSprite } from '../../render/sprites'
@@ -14,27 +17,27 @@ import { drawSprite, getSprite } from '../../render/sprites'
  * hatch jams open: the core becomes vulnerable but starts vomiting slag.
  */
 bossDef({
-  id: 'smelter', hp: 2600, r: 62, sprite: 'smelter_body', layer: 'ground', explode: 'large', score: 20000,
+  id: 'smelter', hp: 2600, r: 80, sprite: 'smelter_body', layer: 'ground', explode: 'large', score: 20000,
   update(e, w, dt) { smelterUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
-    drawSprite(ctx, getSprite('smelter_body'), e.x, e.y, 0, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('smelter_body'), e.x, e.y, 0, S, 1, e.flash)
     const open = e.s.phase >= 2
     const k = open ? 0.7 + 0.3 * Math.sin(w.time * 9) : 0
     if (open) {
       ctx.globalCompositeOperation = 'lighter'
-      const g = ctx.createRadialGradient(e.x, e.y - 4, 2, e.x, e.y - 4, 34)
+      const g = ctx.createRadialGradient(e.x, e.y - 4 * S, 2, e.x, e.y - 4 * S, 34 * S)
       g.addColorStop(0, `rgba(255,250,220,${k})`)
       g.addColorStop(0.4, `rgba(255,150,40,${k * 0.9})`)
       g.addColorStop(1, 'rgba(255,60,0,0)')
       ctx.fillStyle = g
-      ctx.beginPath(); ctx.arc(e.x, e.y - 4, 34, 0, TAU); ctx.fill()
+      ctx.beginPath(); ctx.arc(e.x, e.y - 4 * S, 34 * S, 0, TAU); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
-    } else drawSprite(ctx, getSprite('smelter_hatch'), e.x, e.y - 4, 0, 1, 1, e.flash)
+    } else drawSprite(ctx, getSprite('smelter_hatch'), e.x, e.y - 4 * S, 0, S, 1, e.flash)
   },
 })
 
 bossDef({
-  id: 'smelter_arm', hp: 700, r: 26, sprite: 'smelter_arm', layer: 'ground', explode: 'large', score: 3000,
+  id: 'smelter_arm', hp: 700, r: 34, scale: S, sprite: 'smelter_arm', layer: 'ground', explode: 'large', score: 3000,
   update(e, w) {
     const root = e.parent!
     if (root.s.intro) return
@@ -43,8 +46,8 @@ bossDef({
     if (e.s.t <= 0) {
       e.s.t = 2.3
       const a = Math.PI / 2 + e.rot
-      fan(w, e.x, e.y + 36, a, 7, 0.95, 165, BulletKind.Orb, 12)
-      if (w.diff.sharp) w.after(0.25, () => { if (!e.dead) fan(w, e.x, e.y + 36, a, 6, 0.8, 195) })
+      fan(w, e.x, e.y + 46, a, 9, 1.1, 175, BulletKind.Orb, 12)
+      if (w.diff.sharp) w.after(0.25, () => { if (!e.dead) fan(w, e.x, e.y + 46, a, 8, 0.9, 205) })
       for (let i = 0; i < 6; i++) w.parts.spawn(P.Fire, e.x, e.y + 40, rand(-60, 60), rand(80, 200), 0.3, 6, 14, 0, 2)
     }
   },
@@ -52,7 +55,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'smelter_pod', hp: 350, r: 18, sprite: 'smelter_pod', layer: 'ground', explode: 'medium', score: 1500,
+  id: 'smelter_pod', hp: 350, r: 23, scale: S, sprite: 'smelter_pod', layer: 'ground', explode: 'medium', score: 1500,
   update(e, w) {
     if (e.parent!.s.intro) return
     e.s.t = (e.s.t ?? (e.ox < 0 ? 1 : 3)) - w.frameDt * w.diff.fireRate
@@ -66,16 +69,16 @@ function smelterUpdate(e: Enemy, w: World, dt: number) {
   s.time = (s.time ?? 0) + dt
   // entrance
   if (s.intro) {
-    e.y += (170 - e.y) * Math.min(1, dt * 0.9)
-    if (Math.abs(e.y - 170) < 3) s.intro = 0
+    e.y += (150 - e.y) * Math.min(1, dt * 0.9)
+    if (Math.abs(e.y - 150) < 3) s.intro = 0
     dust(e, w)
     return
   }
   const parts = w.bossParts
   const arms = alive(parts, 'arm')
   // movement: sway, later stalk the player's column
-  const targetX = s.phase >= 2 ? w.player.x * 0.6 + PW * 0.2 : PW / 2 + Math.sin(s.time * 0.45) * 110
-  const vx = Math.max(-60, Math.min(60, (targetX - e.x) * 1.2))
+  const targetX = s.phase >= 2 ? w.player.x * 0.6 + PW * 0.2 : PW / 2 + Math.sin(s.time * 0.45) * 220
+  const vx = Math.max(-90, Math.min(90, (targetX - e.x) * 1.2))
   e.x += vx * dt
   for (const p of parts) if (p !== e && !p.dead) { p.x = e.x + p.ox; p.y = e.y + p.oy }
   if (Math.abs(vx) > 5) dust(e, w)
@@ -122,7 +125,7 @@ function smelterUpdate(e: Enemy, w: World, dt: number) {
 function dust(e: Enemy, w: World) {
   if (Math.random() < 0.5) {
     const side = Math.random() < 0.5 ? -1 : 1
-    w.parts.spawn(P.Smoke, e.x + side * 88 + rand(-8, 8), e.y + 70, rand(-20, 20), 20, 1, 6, 18, C.smokeLight, 1, true)
+    w.parts.spawn(P.Smoke, e.x + side * 88 * S + rand(-8, 8), e.y + 70 * S, rand(-20, 20), 20, 1, 6, 18, C.smokeLight, 1, true)
   }
 }
 
@@ -132,8 +135,8 @@ export function spawnSmelter(w: World) {
   e.s.phase = 1
   e.armor = 0
   const parts: Enemy[] = []
-  for (const ox of [-92, 92]) parts.push(w.spawn('smelter_arm', e.x + ox, e.y + 30, { parent: e, ox, oy: 30, tag: 'arm' }))
-  for (const ox of [-58, 58]) parts.push(w.spawn('smelter_pod', e.x + ox, e.y - 52, { parent: e, ox, oy: -52, tag: 'pod' }))
+  for (const ox of [-92 * S, 92 * S]) parts.push(w.spawn('smelter_arm', e.x + ox, e.y + 30 * S, { parent: e, ox, oy: 30 * S, tag: 'arm' }))
+  for (const ox of [-58 * S, 58 * S]) parts.push(w.spawn('smelter_pod', e.x + ox, e.y - 52 * S, { parent: e, ox, oy: -52 * S, tag: 'pod' }))
   startBoss(w, e, 'Smelter — refinery crawler', parts)
   return e
 }

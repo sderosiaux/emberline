@@ -32,12 +32,15 @@ p { margin: 0; }
 .btn.danger.focus, .btn.danger:hover { background: var(--bad); color: #fff; box-shadow: -4px 0 0 var(--ink); }
 
 /* ─── title ─── */
-.title-panel { position: absolute; left: 0; top: 0; width: 360px; height: 720px; padding: 56px 40px 36px; display: flex; flex-direction: column; }
+.title-panel { position: absolute; left: 44px; top: 44px; width: 380px; height: 632px; padding: 40px 36px 28px; display: flex; flex-direction: column; background-color: rgba(244,240,230,0.95) !important; border: 2px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); }
 .wordmark { font-size: 44px; letter-spacing: 0.16em; line-height: 1; margin-top: 10px; }
 .tagline { margin-top: 14px; font-size: 14px; color: var(--ink2); line-height: 1.45; }
 .menu { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
 .title-foot { margin-top: 22px; font-size: 11px; color: var(--muted); line-height: 1.6; }
-.title-right { position: absolute; left: 920px; top: 0; width: 360px; height: 720px; padding: 56px 36px; display: flex; flex-direction: column; gap: 10px; }
+.title-right { position: absolute; left: 1040px; top: 0; width: 240px; height: 720px; padding: 30px 20px; display: flex; flex-direction: column; gap: 6px; color: #f2ede2; }
+.title-right .kicker { color: #8d889c; }
+.title-right .rule { background: rgba(255,255,255,0.1); }
+.title-right .stat-row { border-bottom-color: rgba(255,255,255,0.1); font-size: 12px; }
 .stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .stat-row b { font-family: var(--fontMono); font-weight: 600; }
 
@@ -133,7 +136,7 @@ p { margin: 0; }
 .toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 18px; font: 600 13px var(--fontHead); letter-spacing: 0.08em; box-shadow: 4px 4px 0 var(--ember); transition: opacity 200ms; }
 
 /* ─── pause / failed ─── */
-.overlay-field { position: absolute; left: 360px; top: 0; width: 560px; height: 720px; display: flex; align-items: center; justify-content: center; background: rgba(28, 26, 34, 0.4); }
+.overlay-field { position: absolute; left: 0; top: 0; width: 1040px; height: 720px; display: flex; align-items: center; justify-content: center; background: rgba(28, 26, 34, 0.4); }
 
 /* ─── ending ─── */
 .ending { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }

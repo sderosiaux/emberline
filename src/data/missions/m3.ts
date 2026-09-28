@@ -1,6 +1,6 @@
 import type { MissionDef } from '../../game/level'
 import { F } from '../../game/level'
-import { PW } from '../../game/consts'
+import { PW, sx } from '../../game/consts'
 import type { World } from '../../game/world'
 import type { Enemy } from '../../game/entities'
 import { PickupKind } from '../../game/entities'
@@ -66,40 +66,40 @@ function linked(w: World, id: string, x: number, y: number, g: Enemy | null, vx 
 
 /** A: ring — the lesson. Four guns around the source, the source in plain sight. */
 function clusterRing(w: World) {
-  const g = gen(w, 280, -60, 'g1')
-  linked(w, 'turret', 200, -60, g); linked(w, 'turret', 360, -60, g)
-  linked(w, 'turret', 280, -140, g); linked(w, 'flak', 280, 20, g)
+  const g = gen(w, sx(280), -140, 'g1')
+  linked(w, 'turret', sx(200), -140, g); linked(w, 'turret', sx(360), -140, g)
+  linked(w, 'turret', sx(280), -220, g); linked(w, 'flak', sx(280), -60, g)
 }
 
 /** B: hidden source — the shielded bunker sits in the lane, the generator hides behind a hab on the far edge. */
 function clusterHidden(w: World) {
-  const g = gen(w, 515, -250, 'g2')
-  linked(w, 'bunker', 250, -60, g)
-  linked(w, 'flak', 170, -110, g); linked(w, 'flak', 330, -110, g)
-  linked(w, 'artillery', 250, -170, g)
+  const g = gen(w, sx(515), -250, 'g2')
+  linked(w, 'bunker', sx(250), -60, g)
+  linked(w, 'flak', sx(170), -110, g); linked(w, 'flak', sx(330), -110, g)
+  linked(w, 'artillery', sx(250), -170, g)
 }
 
 /** C: relay — the western generator feeds the eastern one, which feeds the battery. Order matters. */
 function clusterRelay(w: World) {
-  const a = gen(w, 70, -120, 'g3')
-  const b = gen(w, 480, -60, 'g4')
+  const a = gen(w, sx(70), -120, 'g3')
+  const b = gen(w, sx(480), -60, 'g4')
   b.shieldedBy = a; b.s.permShield = 1
-  linked(w, 'artillery', 220, -40, b); linked(w, 'artillery', 290, -80, b); linked(w, 'artillery', 360, -40, b)
-  linked(w, 'turret', 140, -60, a); linked(w, 'turret', 420, -130, b)
+  linked(w, 'artillery', sx(220), -40, b); linked(w, 'artillery', sx(290), -80, b); linked(w, 'artillery', sx(360), -40, b)
+  linked(w, 'turret', sx(140), -60, a); linked(w, 'turret', sx(420), -130, b)
 }
 
 /** D: convoy — a generator truck at the tail of a tank column shields the tanks ahead of it. */
 function clusterConvoy(w: World) {
-  const vx = 42, y = 90
+  const vx = 55, y = 76
   const g = gen(w, -40 - 4 * 56 - 10, y, 'g5', vx)
   for (let i = 0; i < 4; i++) linked(w, 'tank', -40 - i * 56, y, g, vx, -Math.PI / 2)
 }
 
 /** E: crossfire — each generator shields the cluster on the OTHER side of the road. */
 function clusterCross(w: World) {
-  const gl = gen(w, 90, -40, 'g6'), gr = gen(w, 470, -40, 'g7')
-  linked(w, 'flak', 150, -130, gr); linked(w, 'turret', 80, -170, gr); linked(w, 'artillery', 160, -210, gr)
-  linked(w, 'flak', 410, -130, gl); linked(w, 'turret', 480, -170, gl); linked(w, 'artillery', 400, -210, gl)
+  const gl = gen(w, sx(90), -40, 'g6'), gr = gen(w, sx(470), -40, 'g7')
+  linked(w, 'flak', sx(150), -130, gr); linked(w, 'turret', sx(80), -170, gr); linked(w, 'artillery', sx(160), -210, gr)
+  linked(w, 'flak', sx(410), -130, gl); linked(w, 'turret', sx(480), -170, gl); linked(w, 'artillery', sx(400), -210, gl)
 }
 
 function tankColumn(w: World, x: number, n: number) {
@@ -115,89 +115,96 @@ export const m3: MissionDef = {
     'Break the grid. Find what they are building. Stop it walking.',
   ],
   script(L) {
+    const X = (f: number) => PW * f
     L.at(0).radio('HALLORAN', 'Rime, Kestrel. Colony domes are civilian. Everything with a Choir slit is not.')
-      .decor('prop_dome', 110, { y: -150 }).decor('prop_hab', 200, { y: -60 }).decor('prop_antenna', 60, { y: -40 })
+      .decor('prop_dome', X(0.2), { y: -150 }).decor('prop_hab', X(0.36), { y: -60 }).decor('prop_antenna', X(0.1), { y: -40 })
+      .decor('prop_dome', X(0.84), { y: -420 })
     // ── snow roads: convoys and artillery ──
-    L.at(2).wave('dart', 5, 0.1, F.vee(PW / 2, 150)).do((w) => tankColumn(w, 420, 3))
-    L.at(5).wave('wasp', 3, 0.35, F.hover(150, 5))
-    L.at(7).ground('artillery', 140, { y: -60 }).decor('prop_ice_ridge', 400, { y: -80 })
-    L.at(10).do((w) => { for (let i = 0; i < 4; i++) spawnGround(w, 'tank', PW + 40 + i * 56, 70, -45, Math.PI / 2) })
-      .wave('dart', 6, 0.25, F.swoop(-1, 0.4))
-    L.at(13).wave('lancer', 3, 0.45, F.spreadSelf(120, PW - 120)).decor('prop_hab', 470, { y: -60 })
-    L.at(16).gate()
+    L.at(1.5).wave('dart', 7, 0.08, F.vee(X(0.5), 170)).do((w) => tankColumn(w, X(0.75), 3))
+    L.at(3.5).wave('wasp', 5, 0.25, F.hover(125, 4.5))
+    L.at(5).ground('artillery', X(0.25), { y: -60 }).ground('artillery', X(0.9), { y: -110 }).decor('prop_ice_ridge', X(0.7), { y: -80 })
+    L.at(7).do((w) => { for (let i = 0; i < 5; i++) spawnGround(w, 'tank', PW + 40 + i * 56, 60, -58, Math.PI / 2) })
+      .wave('dart', 8, 0.2, F.swoop(-1, 0.42, 290))
+    L.at(9).wave('lancer', 4, 0.3, F.spreadSelf(X(0.15), X(0.85))).decor('prop_hab', X(0.84), { y: -60 })
+    L.at(10.5).wave('dart', 6, 0.15, F.column(X(0.2), 230, 0)).wave('dart', 6, 0.15, F.column(X(0.8), 230, 0))
+    L.at(12.5).gate(10)
 
     // ── generator cluster A: the lesson ──
-    L.at(17).decor('prop_dome', 440, { y: -160 }).do(clusterRing)
-    L.at(18).radio('HALLORAN', 'Shield generator. Everything tied to it shrugs off fire. Kill the source.')
-    L.at(20).wave('wasp', 3, 0.35, F.hover(160, 6, 110, PW - 110))
-    L.at(21).wave('weaver', 4, 0.5, F.sine(PW * 0.25, 70, 2.2, 110))
-    L.at(24).wave('dart', 6, 0.2, F.swoop(1, 0.35)).ground('cache', 60, { y: -40 })
-    L.at(27).gate()
-    L.at(29).do((w) => tankColumn(w, 120, 4)).ground('artillery', 440, { y: -60 }).decor('prop_antenna', 480, { y: -120 })
-    L.at(31).wave('bomber', 1, 0, F.column(PW * 0.6, 55)).wave('dart', 4, 0.15, F.vee(PW * 0.6, 60, 50, 20))
+    L.at(13).decor('prop_dome', X(0.8), { y: -160 }).do(clusterRing)
+    L.at(14).radio('HALLORAN', 'Shield generator. Everything tied to it shrugs off fire. Kill the source.')
+    L.at(15.5).wave('wasp', 5, 0.25, F.hover(135, 5.5, X(0.15), X(0.85)))
+    L.at(16.5).wave('weaver', 5, 0.4, F.sine(X(0.2), 90, 2.3, 130)).wave('weaver', 5, 0.4, F.sine(X(0.8), 90, 2.3, 130))
+    L.at(19).wave('dart', 8, 0.18, F.swoop(1, 0.38, 290)).ground('cache', X(0.08), { y: -40 })
+    L.at(21.5).gate(12)
+    L.at(22.5).do((w) => tankColumn(w, X(0.2), 4)).ground('artillery', X(0.78), { y: -60 }).decor('prop_antenna', X(0.86), { y: -120 })
+    L.at(24).wave('bomber', 1, 0, F.column(X(0.6), 60)).wave('dart', 6, 0.12, F.vee(X(0.6), 70, 50, 20))
+      .wave('wasp', 5, 0.2, F.swoop(-1, 0.35, 290))
 
     // ── cluster B: the source is not where the guns are ──
-    L.at(35).decor('prop_hab', 520, { y: -250 }).decor('prop_ice_ridge', 250, { y: -230 }).do(clusterHidden)
-    L.at(38).radio('KESTREL', 'Bunker is linked to something. Not anything I can see.')
-    L.at(40).wave('wasp', 4, 0.3, F.hover(170, 5, 90, PW - 160))
-    L.at(42).wave('dart', 8, 0.2, F.loop(1, 210))
-    L.at(44).wave('lancer', 3, 0.5, F.spreadSelf(120, PW - 120))
-    L.at(47).gate()
+    L.at(27).decor('prop_hab', X(0.93), { y: -250 }).decor('prop_ice_ridge', X(0.45), { y: -230 }).do(clusterHidden)
+    L.at(29.5).radio('KESTREL', 'Bunker is linked to something. Not anything I can see.')
+    L.at(31).wave('wasp', 6, 0.22, F.hover(145, 5, X(0.12), X(0.7)))
+    L.at(32.5).wave('dart', 10, 0.16, F.loop(1, 180, 120, 290))
+    L.at(34.5).wave('lancer', 4, 0.35, F.spreadSelf(X(0.15), X(0.85)))
+    L.at(37).gate(12)
 
     // ── the Meridian: frozen transport, black box aboard ──
-    L.at(49).decor('prop_frozen_ship', 470, { y: -170 }).ground('m3_blackbox', 503, { y: -262 })
-      .ground('turret', 360, { y: -100 }).ground('turret', 380, { y: -220 })
-    L.at(50).radio('HALLORAN', 'Transport Meridian. Went into the ice nine winters ago. Nobody ever recovered her.')
-    L.at(52).wave('missileer', 2, 0.6, F.hover(120, 7, 140, 320)).wave('dart', 6, 0.18, F.swoop(-1, 0.3))
-    L.at(57).do((w) => { for (let i = 0; i < 4; i++) spawnGround(w, 'tank', -40 - i * 56, 110, 45, -Math.PI / 2) })
-      .ground('repair_cache', 90, { y: -40 })
-    L.at(60).wave('weaver', 6, 0.35, F.cross([[-30, 100], [PW * 0.5, 260], [PW + 40, 420]], 200))
-    L.at(63).gate()
+    L.at(38).decor('prop_frozen_ship', X(0.84), { y: -170 }).ground('m3_blackbox', X(0.84) + 33, { y: -262 })
+      .ground('turret', X(0.64), { y: -100 }).ground('turret', X(0.68), { y: -220 }).ground('turret', X(0.3), { y: -150 })
+    L.at(39).radio('HALLORAN', 'Transport Meridian. Went into the ice nine winters ago. Nobody ever recovered her.')
+    L.at(40.5).wave('missileer', 3, 0.45, F.hover(100, 6.5, X(0.2), X(0.6))).wave('dart', 8, 0.16, F.swoop(-1, 0.35, 290))
+    L.at(44.5).do((w) => { for (let i = 0; i < 5; i++) spawnGround(w, 'tank', -40 - i * 56, 94, 58, -Math.PI / 2) })
+      .ground('repair_cache', X(0.16), { y: -40 })
+    L.at(47).wave('weaver', 8, 0.28, F.cross([[-30, 85], [PW * 0.5, 220], [PW + 40, 360]], 260))
+    L.at(49.5).gate(12)
 
     // ── cluster C: relay chain ──
-    L.at(65).decor('prop_dome', 280, { y: -260 }).do(clusterRelay)
-    L.at(67).radio('HALLORAN', 'Two generators. The west one is feeding the east one. Work it backwards.')
-    L.at(68).wave('wasp', 4, 0.3, F.hover(170, 6))
-    L.at(70).wave('dart', 8, 0.2, F.loop(-1, 200))
-    L.at(74).wave('bomber', 2, 1, F.column(PW * 0.7, 60))
-    L.at(78).gate(22)
+    L.at(51).decor('prop_dome', X(0.5), { y: -260 }).do(clusterRelay)
+    L.at(52.5).radio('HALLORAN', 'Two generators. The west one is feeding the east one. Work it backwards.')
+    L.at(53.5).wave('wasp', 6, 0.22, F.hover(145, 5.5))
+    L.at(55.5).wave('dart', 10, 0.16, F.loop(-1, 170, 120, 290))
+    L.at(58.5).wave('bomber', 2, 1, F.column(X(0.7), 60)).wave('weaver', 5, 0.4, F.sine(X(0.25), 90, 2.3, 130))
+    L.at(61).gate(12)
 
     // ── blizzard: shields and medics guarding the guns ──
-    L.at(80).phase('blizzard').intensity(1).radio('KESTREL', 'Whiteout. I can barely see the ground.')
-    L.at(82).intensity(2).wave('warden', 1, 0, F.hoverAt(PW / 2, 140, 10)).wave('missileer', 2, 0.3, F.hover(170, 10, PW / 2 - 70, PW / 2 + 70))
-    L.at(84).radio('HALLORAN', 'Shield-bearer first. Then whatever is keeping them patched. Then the guns.')
-    L.at(89).wave('mender', 1, 0, F.hoverAt(PW * 0.3, 110, 10)).wave('sniper', 2, 0.4, F.hover(150, 10, PW * 0.2, PW * 0.45))
-    L.at(87).wave('lancer', 3, 0.5, F.spreadSelf(100, PW - 100))
-    L.at(91).wave('lancer', 2, 0.6, F.spreadSelf(PW * 0.55, PW - 90))
-    L.at(93).wave('wasp', 5, 0.25, F.swoop(1, 0.4))
-    L.at(95).gate(20)
-    L.at(97).intensity(3).wave('warden', 1, 0, F.hoverAt(PW * 0.65, 130, 12)).wave('mender', 1, 0, F.hoverAt(PW * 0.65, 70, 12))
-      .wave('missileer', 2, 0.4, F.hover(180, 12, PW * 0.5, PW * 0.8)).wave('sniper', 1, 0, F.hoverAt(PW * 0.25, 120, 10))
-    L.at(101).wave('dart', 6, 0.2, F.swoop(-1, 0.35)).do((w) => tankColumn(w, 430, 3)).ground('artillery', 110, { y: -60 })
-    L.at(105).gate(22)
+    L.at(62).phase('blizzard').intensity(1).radio('KESTREL', 'Whiteout. I can barely see the ground.')
+    L.at(63.5).intensity(2).wave('warden', 1, 0, F.hoverAt(X(0.5), 120, 8)).wave('missileer', 3, 0.3, F.hover(145, 7.5, X(0.5) - sx(80), X(0.5) + sx(80)))
+    L.at(65).radio('HALLORAN', 'Shield-bearer first. Then whatever is keeping them patched. Then the guns.')
+    L.at(66.5).wave('lancer', 4, 0.4, F.spreadSelf(X(0.12), X(0.88)))
+    L.at(68).wave('mender', 1, 0, F.hoverAt(X(0.3), 95, 7.5)).wave('sniper', 2, 0.4, F.hover(128, 7, X(0.18), X(0.44)))
+    L.at(70).wave('lancer', 3, 0.5, F.spreadSelf(X(0.55), X(0.9)))
+    L.at(71.5).wave('wasp', 7, 0.2, F.swoop(1, 0.4, 290))
+    L.at(73.5).gate(12)
+    L.at(75).intensity(3).wave('warden', 1, 0, F.hoverAt(X(0.68), 110, 8.5)).wave('mender', 1, 0, F.hoverAt(X(0.68), 60, 8.5))
+      .wave('missileer', 3, 0.35, F.hover(152, 8, X(0.52), X(0.84))).wave('sniper', 1, 0, F.hoverAt(X(0.22), 100, 7.5))
+      .wave('wasp', 4, 0.25, F.hover(140, 6.5, X(0.1), X(0.35)))
+    L.at(78.5).wave('dart', 8, 0.16, F.swoop(-1, 0.35, 290)).do((w) => tankColumn(w, X(0.77), 3)).ground('artillery', X(0.2), { y: -60 })
+    L.at(82).gate(12)
     // cluster D rolls through the whiteout
-    L.at(107).do(clusterConvoy).radio('KESTREL', 'Tank column. Something at the back is humming.')
-    L.at(110).wave('weaver', 4, 0.4, F.sine(PW * 0.7, 70, 2.2, 110)).ground('artillery', 470, { y: -60 }).ground('flak', 300, { y: -120 })
-    L.at(114).wave('warden', 1, 0, F.hoverAt(PW * 0.35, 150, 9)).wave('wasp', 4, 0.3, F.hover(170, 9, PW * 0.2, PW * 0.5)).wave('mender', 1, 0, F.hoverAt(PW * 0.75, 110, 9))
-    L.at(120).gate(22)
+    L.at(83).do(clusterConvoy).radio('KESTREL', 'Tank column. Something at the back is humming.')
+    L.at(85.5).wave('weaver', 5, 0.4, F.sine(X(0.72), 90, 2.3, 130)).ground('artillery', X(0.85), { y: -60 }).ground('flak', X(0.5), { y: -120 })
+    L.at(89).wave('warden', 1, 0, F.hoverAt(X(0.35), 128, 7)).wave('wasp', 5, 0.25, F.hover(145, 6.5, X(0.18), X(0.52))).wave('mender', 1, 0, F.hoverAt(X(0.75), 95, 7))
+    L.at(93).gate(12)
 
     // ── clearing: crossfire cluster and the last push ──
-    L.at(122).phase('clear').intensity(2).radio('HALLORAN', 'Weather is lifting. Choir construction yard dead ahead.')
-    L.at(123).decor('prop_ice_ridge', 280, { y: -260 }).do(clusterCross)
-    L.at(126).radio('KESTREL', 'The generators are crossing their wires. Left feeds right, right feeds left.')
-    L.at(128).wave('gunship', 1, 0, F.hoverAt(PW / 2, 150, 9)).wave('dart', 8, 0.3, F.loop(1, 220))
-    L.at(133).do((w) => tankColumn(w, 280, 4)).ground('silo', 100, { y: -60 }).ground('silo', 460, { y: -60 })
-    L.at(137).wave('splitter', 2, 1, F.hover(160, 6, 170, PW - 170)).wave('wasp', 4, 0.3, F.swoop(1, 0.4))
-    L.at(139).wave('bomber', 2, 1, F.column(PW * 0.35, 60))
-    L.at(141).intensity(3).wave('missileer', 2, 0.6, F.hover(120, 8, 140, PW - 140)).wave('warden', 1, 0, F.hoverAt(PW / 2, 90, 8)).wave('sniper', 2, 0.5, F.hover(80, 8, 100, PW - 100))
-    L.at(145).gate()
+    L.at(94).phase('clear').intensity(2).radio('HALLORAN', 'Weather is lifting. Choir construction yard dead ahead.')
+    L.at(95).decor('prop_ice_ridge', X(0.5), { y: -260 }).do(clusterCross)
+    L.at(97.5).radio('KESTREL', 'The generators are crossing their wires. Left feeds right, right feeds left.')
+    L.at(99).wave('gunship', 1, 0, F.hoverAt(X(0.5), 128, 8))
+      .wave('dart', 10, 0.25, F.loop(1, 190, 120, 290)).wave('dart', 10, 0.25, F.loop(-1, 190, 120, 290))
+    L.at(103).do((w) => tankColumn(w, X(0.5), 4)).ground('silo', X(0.18), { y: -60 }).ground('silo', X(0.82), { y: -60 })
+    L.at(106).wave('splitter', 3, 0.6, F.hover(135, 5, X(0.2), X(0.8))).wave('wasp', 6, 0.2, F.swoop(1, 0.4, 290))
+    L.at(108).wave('bomber', 2, 1, F.column(X(0.35), 60))
+    L.at(110).intensity(3).wave('missileer', 3, 0.45, F.hover(100, 7, X(0.2), X(0.8))).wave('warden', 1, 0, F.hoverAt(X(0.5), 75, 7))
+      .wave('sniper', 3, 0.4, F.hover(68, 7, X(0.15), X(0.85)))
+    L.at(114).gate(12)
 
     // ── BASTION ──
-    L.at(147).scroll(0, 4).intensity(1).radio('HALLORAN', 'Seismic contact on the ice. Tracked. Big. It is heading for the domes.')
-    L.at(150).radio('CHOIR', 'WE BUILT A WALL AROUND YOUR PEOPLE. NOW THE WALL COMES HOME.', 'enemy')
-    L.at(151).do((w) => spawnBastion(w, GRID.every((t) => w.flags.has(`gen:${t}`))))
-    L.at(152).until('boss_dead')
-    L.at(154).radio('HALLORAN', 'The domes are opening. People are walking out onto the ice. Come home, Kestrel.')
-    L.at(158).do(() => {})
+    L.at(115).scroll(0, 4).intensity(1).radio('HALLORAN', 'Seismic contact on the ice. Tracked. Big. It is heading for the domes.')
+    L.at(118).radio('CHOIR', 'WE BUILT A WALL AROUND YOUR PEOPLE. NOW THE WALL COMES HOME.', 'enemy')
+    L.at(119).do((w) => spawnBastion(w, GRID.every((t) => w.flags.has(`gen:${t}`))))
+    L.at(120).until('boss_dead')
+    L.at(122).radio('HALLORAN', 'The domes are opening. People are walking out onto the ice. Come home, Kestrel.')
+    L.at(126).do(() => {})
   },
 }

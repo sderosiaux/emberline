@@ -57,10 +57,10 @@ def run(pg, logs):
     last = None
     for _ in range(90):
         if opt('--nociv'): pg.evaluate("__emb.app.session && __emb.app.session.world.flags.delete('civilian_hit')")
-        if opt('--allgen'): pg.evaluate("(() => { const w = __emb.app.session && __emb.app.session.world; if (w && !w.boss) for (const e of w.enemies) if (e.def.id === 'generator' && e.y > 0 && e.x > 0 && e.x < 560 && !(e.shieldedBy && !e.shieldedBy.dead)) w.kill(e) })()")
+        if opt('--allgen'): pg.evaluate("(() => { const w = __emb.app.session && __emb.app.session.world; if (w && !w.boss) for (const e of w.enemies) if (e.def.id === 'generator' && e.y > 0 && e.x > 0 && e.x < 832 && !(e.shieldedBy && !e.shieldedBy.dead)) w.kill(e) })()")
         if opt('--allgen'):
             for _ in range(20):
-                pg.evaluate("(() => { const w = __emb.app.session && __emb.app.session.world; if (w && !w.boss) for (const e of w.enemies) if (e.def.id === 'generator' && e.y > 0 && e.x > 0 && e.x < 560 && !(e.shieldedBy && !e.shieldedBy.dead)) w.kill(e) })()")
+                pg.evaluate("(() => { const w = __emb.app.session && __emb.app.session.world; if (w && !w.boss) for (const e of w.enemies) if (e.def.id === 'generator' && e.y > 0 && e.x > 0 && e.x < 832 && !(e.shieldedBy && !e.shieldedBy.dead)) w.kill(e) })()")
                 pg.evaluate('__emb.simulate(0.5)')
         st = pg.evaluate('__emb.simulate(10)'); cores = pg.evaluate('__emb.app.session ? [__emb.app.session.world.stats.cores, Math.round(__emb.app.session.world.stats.damageTaken)] : null'); st['cores'] = cores
         last = st

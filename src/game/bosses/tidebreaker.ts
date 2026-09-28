@@ -6,7 +6,7 @@ import { GroundMover } from '../movers'
 import { bossDef, startBoss, partDown, phaseShift, alive } from './common'
 import { aimed, ring, missile, fan, enemySfx } from '../patterns'
 import { explode, chainExplosion, sfxAt } from '../fx'
-import { PW } from '../consts'
+import { PW, PH } from '../consts'
 import { rand, TAU, clamp } from '../../core/math'
 import { P, C } from '../../render/particles'
 import { drawSprite, getSprite } from '../../render/sprites'
@@ -20,49 +20,54 @@ import { drawSprite, getSprite } from '../../render/sprites'
  * into a whirlpool of curving shots.
  */
 
+/**
+ * Boss scale for the wide field (art is painted at 1×). Smaller than the usual
+ * 1.3: the hull is a long vertical sprite and must still fit the shorter field.
+ */
+const S = 1.15
 /** Root sits on the core; the hull sprite is drawn this far above it. */
-const HULL = -40
-const HOME_Y = 245
+const HULL = -40 * S
+const HOME_Y = 212
 const enum Mode { Intro, Up, Diving, Under, Rising }
 
 const sub = (e: Enemy) => (e.parent ?? e).s.sub ?? 0
 
 bossDef({
-  id: 'm2_tidebreaker', hp: 4400, r: 60, sprite: 'm2_tide_hull', layer: 'ground', explode: 'large', score: 25000, z: -1,
+  id: 'm2_tidebreaker', hp: 4400, r: 69, sprite: 'm2_tide_hull', layer: 'ground', explode: 'large', score: 25000, z: -1,
   update(e, w, dt) { tideUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
     const s = e.s
     const k = s.sub ?? 0
     if (k > 0.02) {
       // wake + shadow while submerged
-      drawSprite(ctx, getSprite('m2_tide_shadow'), e.x + 4, e.y + HULL + 8, 0, 1, Math.min(1, k * 1.3))
+      drawSprite(ctx, getSprite('m2_tide_shadow'), e.x + 4, e.y + HULL + 8, 0, S, Math.min(1, k * 1.3))
     }
     const a = 1 - k * 0.92
     if (a <= 0.03) return
     if ((s.phase ?? 1) >= 2) {
-      const sp = (s.split ?? 0) * 16
-      drawSprite(ctx, getSprite('m2_tide_hull_l'), e.x - sp, e.y + HULL, -sp * 0.002, 1, a, e.flash)
-      drawSprite(ctx, getSprite('m2_tide_hull_r'), e.x + sp, e.y + HULL, sp * 0.002, 1, a, e.flash)
+      const sp = (s.split ?? 0) * 16 * S
+      drawSprite(ctx, getSprite('m2_tide_hull_l'), e.x - sp, e.y + HULL, -sp * 0.002, S, a, e.flash)
+      drawSprite(ctx, getSprite('m2_tide_hull_r'), e.x + sp, e.y + HULL, sp * 0.002, S, a, e.flash)
       // exposed core between the halves
       const pulse = 0.75 + 0.25 * Math.sin(w.time * 6)
       ctx.globalCompositeOperation = 'lighter'
-      const g = ctx.createRadialGradient(e.x, e.y, 4, e.x, e.y, 70)
+      const g = ctx.createRadialGradient(e.x, e.y, 4, e.x, e.y, 70 * S)
       g.addColorStop(0, `rgba(200,255,240,${0.5 * pulse})`)
       g.addColorStop(0.5, `rgba(60,200,180,${0.22 * pulse})`)
       g.addColorStop(1, 'rgba(0,80,90,0)')
       ctx.fillStyle = g
-      ctx.beginPath(); ctx.arc(e.x, e.y, 70, 0, TAU); ctx.fill()
+      ctx.beginPath(); ctx.arc(e.x, e.y, 70 * S, 0, TAU); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
-      drawSprite(ctx, getSprite('m2_tide_core'), e.x, e.y, 0, 0.9 + 0.08 * pulse * (s.split ?? 0), a, e.flash)
+      drawSprite(ctx, getSprite('m2_tide_core'), e.x, e.y, 0, S * (0.9 + 0.08 * pulse * (s.split ?? 0)), a, e.flash)
     } else {
-      drawSprite(ctx, getSprite('m2_tide_hull'), e.x, e.y + HULL, 0, 1, a, e.flash)
+      drawSprite(ctx, getSprite('m2_tide_hull'), e.x, e.y + HULL, 0, S, a, e.flash)
     }
   },
-  onDeath(e, w) { sinkingWreck(w, e.x, e.y + HULL, (e.s.split ?? 0) * 16) },
+  onDeath(e, w) { sinkingWreck(w, e.x, e.y + HULL, (e.s.split ?? 0) * 16 * S) },
 })
 
 bossDef({
-  id: 'm2_tide_tower', hp: 1700, r: 24, sprite: 'm2_tide_tower', layer: 'ground', explode: 'large', score: 4000,
+  id: 'm2_tide_tower', hp: 1700, r: 28, scale: S, sprite: 'm2_tide_tower', layer: 'ground', explode: 'large', score: 4000,
   update(e, w, dt) {
     if (!partActive(e)) return
     const ph = e.parent!.s.phase ?? 1
@@ -70,9 +75,9 @@ bossDef({
     if (e.s.f <= 0) {
       e.s.f = 2.3
       e.s.n = (e.s.n ?? 0) + 1
-      if (e.s.n % 3 === 0) fan(w, e.x, e.y + 40, Math.PI / 2, 9, 1.6, 150, BulletKind.Needle, 10)
-      else aimed(w, e.x, e.y + 40, 205, 3, 0.16)
-      if (w.diff.sharp && ph === 1) w.after(0.3, () => { if (!e.dead) aimed(w, e.x, e.y + 40, 230, 2, 0.1) })
+      if (e.s.n % 3 === 0) fan(w, e.x, e.y + 40 * S, Math.PI / 2, 11, 1.7, 155, BulletKind.Needle, 10)
+      else aimed(w, e.x, e.y + 40 * S, 205, 3, 0.16)
+      if (w.diff.sharp && ph === 1) w.after(0.3, () => { if (!e.dead) aimed(w, e.x, e.y + 40 * S, 230, 2, 0.1) })
     }
   },
   drawBody: (ctx, e) => drawPart(ctx, e, 'm2_tide_tower'),
@@ -83,13 +88,13 @@ bossDef({
 })
 
 bossDef({
-  id: 'm2_tide_tube', hp: 850, r: 20, sprite: 'm2_tide_tube', layer: 'ground', explode: 'medium', score: 2500,
+  id: 'm2_tide_tube', hp: 850, r: 23, scale: S, sprite: 'm2_tide_tube', layer: 'ground', explode: 'medium', score: 2500,
   update(e, w, dt) {
     if (!partActive(e)) { e.s.charge = 0; return }
     const ph = e.parent!.s.phase ?? 1
     if (e.s.charge > 0) {
       e.s.charge -= dt
-      if (Math.random() < 0.5) w.parts.spawn(P.Glow, e.x + rand(-8, 8), e.y + 22, 0, 30, 0.2, 5, 1, C.ice)
+      if (Math.random() < 0.5) w.parts.spawn(P.Glow, e.x + rand(-8, 8), e.y + 22 * S, 0, 30, 0.2, 5, 1, C.ice)
       if (e.s.charge <= 0) torpedoes(e, w, ph)
       return
     }
@@ -97,7 +102,7 @@ bossDef({
     if (e.s.f <= 0) {
       e.s.f = ph >= 2 ? 3 : 3.8
       e.s.charge = 0.75
-      e.s.ang = clamp(w.aim(e.x, e.y + 24, 200), Math.PI / 2 - 0.55, Math.PI / 2 + 0.55)
+      e.s.ang = clamp(w.aim(e.x, e.y + 24 * S, 200), Math.PI / 2 - 0.55, Math.PI / 2 + 0.55)
     }
   },
   drawBody: (ctx, e) => drawPart(ctx, e, 'm2_tide_tube'),
@@ -110,8 +115,8 @@ bossDef({
     ctx.setLineDash([8, 8])
     ctx.lineDashOffset = -w.time * 60
     for (const s of [-1, 1]) {
-      const x0 = e.x + s * 6, y0 = e.y + 24
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(a) * 700, y0 + Math.sin(a) * 700); ctx.stroke()
+      const x0 = e.x + s * 6 * S, y0 = e.y + 24 * S
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(a) * 800, y0 + Math.sin(a) * 800); ctx.stroke()
     }
     ctx.setLineDash([])
   },
@@ -119,7 +124,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'm2_tide_vls', hp: 1100, r: 26, sprite: 'm2_tide_vls', layer: 'ground', explode: 'medium', score: 3000,
+  id: 'm2_tide_vls', hp: 1100, r: 30, scale: S, sprite: 'm2_tide_vls', layer: 'ground', explode: 'medium', score: 3000,
   update(e, w, dt) {
     e.s.open = Math.max(0, (e.s.open ?? 0) - dt)
     if (!partActive(e)) return
@@ -133,14 +138,14 @@ bossDef({
         w.after(i * 0.16, () => {
           if (e.dead || !partActive(e)) return
           const side = i % 2 ? 1 : -1
-          missile(w, e.x + side * 14, e.y, -Math.PI / 2 + side * (0.6 + (i >> 1) * 0.35), 125, 1.45, 8)
+          missile(w, e.x + side * 14 * S, e.y, -Math.PI / 2 + side * (0.6 + (i >> 1) * 0.35), 125, 1.45, 8)
         })
       }
     }
   },
   drawBody(ctx, e) {
     drawPart(ctx, e, 'm2_tide_vls')
-    if (e.s.open > 0 && sub(e) < 0.3) drawSprite(ctx, getSprite('m2_tide_vls_open'), e.x, e.y, 0, 1, Math.min(1, e.s.open * 3))
+    if (e.s.open > 0 && sub(e) < 0.3) drawSprite(ctx, getSprite('m2_tide_vls_open'), e.x, e.y, 0, S, Math.min(1, e.s.open * 3))
   },
   onDeath(e, w) { partDown(w, e, 'medium') },
 })
@@ -156,20 +161,20 @@ function partActive(e: Enemy) {
 function drawPart(ctx: CanvasRenderingContext2D, e: Enemy, key: string) {
   const a = 1 - sub(e) * 1.6
   if (a <= 0.02) return
-  drawSprite(ctx, getSprite(key), e.x, e.y, 0, 1, a, e.flash)
+  drawSprite(ctx, getSprite(key), e.x, e.y, 0, S, a, e.flash)
 }
 
 function torpedoes(e: Enemy, w: World, ph: number) {
   const a = e.s.ang
   for (const s of [-1, 1]) {
-    const b = w.fire(e.x + s * 6, e.y + 24, a, 40, BulletKind.Missile, 16)
+    const b = w.fire(e.x + s * 6 * S, e.y + 24 * S, a, 40, BulletKind.Missile, 16)
     if (!b) continue
     b.ax = Math.cos(a) * 300; b.ay = Math.sin(a) * 300
     b.maxSpeed = ph >= 2 ? 320 : 290
     b.hp = 10
     b.ttl = 5
   }
-  for (let i = 0; i < 6; i++) w.parts.spawn(P.Smoke, e.x + rand(-8, 8), e.y + 24, rand(-30, 30), rand(20, 60), 0.6, 4, 12, C.ice, 1, true)
+  for (let i = 0; i < 6; i++) w.parts.spawn(P.Smoke, e.x + rand(-8, 8), e.y + 24 * S, rand(-30, 30), rand(20, 60), 0.6, 4, 12, C.ice, 1, true)
   enemySfx(w, e.x, true)
 }
 
@@ -193,8 +198,8 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
     if (s.mode !== Mode.Up) { s.mode = Mode.Rising; s.t = 1 }
     phaseShift(w, 'THE KEEL BREAKS. THE DEEP LOOKS UP AT YOU.')
     chainExplosion(w, e.x, e.y, 40, 8, 0.8, 'large')
-    e.r = 30
-    for (let i = 0; i < 30; i++) w.parts.spawn(P.Smoke, e.x + rand(-10, 10), e.y + HULL + rand(-120, 160), rand(-80, 80), rand(-40, 40), 1.4, 8, 30, C.ice, 1)
+    e.r = 35
+    for (let i = 0; i < 30; i++) w.parts.spawn(P.Smoke, e.x + rand(-10, 10), e.y + HULL + rand(-140, 185), rand(-80, 80), rand(-40, 40), 1.4, 8, 30, C.ice, 1)
     s.geyser = 3; s.pulse = 2
   }
   if (s.phase === 2 && e.hp < e.maxHp * 0.35) {
@@ -221,13 +226,13 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
       foam(e, w, 0.8)
       if (s.sub >= 1) {
         s.mode = Mode.Under; s.t = 6
-        s.tx = e.x < PW / 2 ? rand(PW * 0.58, PW - 110) : rand(110, PW * 0.42)
+        s.tx = e.x < PW / 2 ? rand(PW * 0.58, PW - 130) : rand(130, PW * 0.42)
         underwaterCall(e, w)
       }
       break
     case Mode.Under:
       s.t -= dt
-      e.x += clamp(s.tx - e.x, -75 * dt, 75 * dt)
+      e.x += clamp(s.tx - e.x, -100 * dt, 100 * dt)
       wake(e, w, 0.6)
       if (s.t <= 0) { s.mode = Mode.Rising; s.t = 1.3 }
       break
@@ -237,8 +242,8 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
       if (s.sub < 0.45 && !s.breached) {
         s.breached = 1
         w.addShake(10)
-        for (let i = 0; i < 3; i++) w.parts.spawn(P.Ring, e.x, e.y + HULL, 0, 0, 0.7 + i * 0.2, 40, 200 + i * 60, C.ice, 0, true)
-        explode(w, e.x, e.y + HULL + 150, 'medium', true, C.ice, true)
+        for (let i = 0; i < 3; i++) w.parts.spawn(P.Ring, e.x, e.y + HULL, 0, 0, 0.7 + i * 0.2, 40, (200 + i * 60) * S, C.ice, 0, true)
+        explode(w, e.x, e.y + HULL + 150 * S, 'medium', true, C.ice, true)
       }
       if (s.sub <= 0) { s.mode = Mode.Up; s.t = 13; s.breached = 0 }
       break
@@ -248,24 +253,24 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
   if (s.mode !== Mode.Up) return
 
   // slow sway while surfaced; broken hull lurches toward the player later
-  if (s.phase >= 3) e.x += clamp(clamp(w.player.x, 120, PW - 120) - e.x, -30 * dt, 30 * dt)
-  else e.x = clamp(e.x + Math.cos(s.time * 0.4) * 14 * dt, 100, PW - 100)
+  if (s.phase >= 3) e.x += clamp(clamp(w.player.x, 160, PW - 160) - e.x, -40 * dt, 40 * dt)
+  else e.x = clamp(e.x + Math.cos(s.time * 0.4) * 21 * dt, 130, PW - 130)
   if (s.phase === 1) return
-  if (Math.random() < 0.3) w.parts.spawn(P.Smoke, e.x + rand(-12, 12), e.y + rand(-120, 100), 0, -20, 1, 5, 18, C.smokeLight, 0.5)
+  if (Math.random() < 0.3) w.parts.spawn(P.Smoke, e.x + rand(-12, 12), e.y + rand(-140, 115), 0, -20, 1, 5, 18, C.smokeLight, 0.5)
 
   // phase 2+: pressure pulses from the core + geysers around the player
   s.pulse -= dt * w.diff.fireRate
   if (s.pulse <= 0) {
     s.pulse = s.phase >= 3 ? 4.2 : 3.1
     s.pulseN = (s.pulseN ?? 0) + 1
-    ring(w, e.x, e.y, s.phase >= 3 ? 12 : 16, 115, s.pulseN * 0.2, BulletKind.Big, 14)
+    ring(w, e.x, e.y, s.phase >= 3 ? 14 : 18, 115, s.pulseN * 0.2, BulletKind.Big, 14)
   }
   s.geyser -= dt * w.diff.fireRate
   if (s.geyser <= 0) {
     s.geyser = s.phase >= 3 ? 6.5 : 4.8
     const px = w.player.x, py = w.player.y
-    const spots: [number, number][] = [[px - 120, py - 150], [px + 120, py - 150], [px, py - 260]]
-    for (const [x, y] of spots) geyser(w, clamp(x, 30, PW - 30), clamp(y, 260, 560))
+    const spots: [number, number][] = [[px - 160, py - 130], [px + 160, py - 130], [px, py - 220]]
+    for (const [x, y] of spots) geyser(w, clamp(x, 30, PW - 30), clamp(y, 200, PH - 24))
   }
   if (s.phase >= 3) whirlpool(e, w, dt)
 }
@@ -282,12 +287,12 @@ function whirlpool(e: Enemy, w: World, dt: number) {
   s.wt += 0.1
   for (let i = 0; i < 3; i++) {
     const a = s.wa + (i / 3) * TAU
-    const b = w.fire(e.x + Math.cos(a) * 24, e.y + Math.sin(a) * 24, a, 125, BulletKind.Wave, 10)
+    const b = w.fire(e.x + Math.cos(a) * 24 * S, e.y + Math.sin(a) * 24 * S, a, 125, BulletKind.Wave, 10)
     if (b) { b.curve = 0.5 * s.whirlDir; b.ttl = 7 }
   }
   enemySfx(w, e.x)
   s.aimT = (s.aimT ?? 2) - 0.1
-  if (s.aimT <= 0) { s.aimT = 2.6; aimed(w, e.x, e.y + 30, 230, 3, 0.12, BulletKind.Needle, 12) }
+  if (s.aimT <= 0) { s.aimT = 2.6; aimed(w, e.x, e.y + 30 * S, 230, 3, 0.12, BulletKind.Needle, 12) }
 }
 
 /** Telegraphed water column: a ring of foam gathers, then bursts into a bullet ring. */
@@ -309,17 +314,17 @@ function geyser(w: World, x: number, y: number) {
 /** While submerged: mines float up and gunboats come to cover the dive. */
 function underwaterCall(e: Enemy, w: World) {
   const n = (e.s.dives = (e.s.dives ?? 0) + 1)
-  const mines = 4 + Math.min(3, n)
+  const mines = 6 + Math.min(3, n)
   for (let i = 0; i < mines; i++) {
     w.after(0.3 + i * 0.35, () => {
       const x = 50 + ((i + 0.5) / mines) * (PW - 100) + rand(-20, 20)
-      const m = w.spawn('mine', x, rand(90, 330), { mover: new RiseMover(18) })
+      const m = w.spawn('mine', x, rand(80, 280), { mover: new RiseMover(18) })
       m.s.rise = 0
     })
   }
   for (const side of [-1, 1]) {
     w.after(1 + (side + 1) * 0.6, () => {
-      const g = w.spawn('gunboat', side < 0 ? -30 : PW + 30, rand(160, 300), { mover: new GroundMover(-side * 55, 10) })
+      const g = w.spawn('gunboat', side < 0 ? -30 : PW + 30, rand(140, 260), { mover: new GroundMover(-side * 72, 10) })
       g.rot = side < 0 ? -Math.PI / 2 : Math.PI / 2
     })
   }
@@ -337,20 +342,20 @@ class RiseMover implements Mover {
 }
 
 function wake(e: Enemy, w: World, k: number) {
-  if (Math.random() < 0.5 * k) w.parts.spawn(P.Smoke, e.x + rand(-40, 40), e.y + HULL + rand(-160, 160), 0, 12, 1.2, 5, 16, C.ice, 0.5, true)
-  if (Math.random() < 0.06 * k) w.parts.spawn(P.Ring, e.x + rand(-20, 20), e.y + HULL + 180, 0, 0, 1.2, 10, 50, C.ice, 0, true)
+  if (Math.random() < 0.5 * k) w.parts.spawn(P.Smoke, e.x + rand(-46, 46), e.y + HULL + rand(-185, 185), 0, 12, 1.2, 5, 16, C.ice, 0.5, true)
+  if (Math.random() < 0.06 * k) w.parts.spawn(P.Ring, e.x + rand(-20, 20), e.y + HULL + 180 * S, 0, 0, 1.2, 10, 60, C.ice, 0, true)
 }
 
 function foam(e: Enemy, w: World, k: number) {
   for (let i = 0; i < 3; i++) if (Math.random() < k) {
     const side = Math.random() < 0.5 ? -1 : 1
-    w.parts.spawn(P.Smoke, e.x + side * rand(40, 70), e.y + HULL + rand(-170, 170), side * rand(10, 50), rand(-20, 20), 1, 6, 22, C.ice, 1, true)
+    w.parts.spawn(P.Smoke, e.x + side * rand(46, 80), e.y + HULL + rand(-195, 195), side * rand(10, 50), rand(-20, 20), 1, 6, 22, C.ice, 1, true)
   }
 }
 
 /** Big multi-stage death: the two halves roll apart and go under, venting fire and steam. */
 function sinkingWreck(w: World, x: number, y: number, split: number) {
-  const mk = (sprite: string, dx: number): Decor => ({ sprite, x: x + dx, y, rot: 0, scale: 1, depth: 0, vx: 0, alpha: 1, above: false })
+  const mk = (sprite: string, dx: number): Decor => ({ sprite, x: x + dx, y, rot: 0, scale: S, depth: 0, vx: 0, alpha: 1, above: false })
   const L = mk('m2_tide_hull_l', -split), R = mk('m2_tide_hull_r', split)
   w.decor.push(L, R)
   const t0 = w.time
@@ -359,19 +364,19 @@ function sinkingWreck(w: World, x: number, y: number, split: number) {
     const k = clamp((t - 1.2) / 4, 0, 1)
     L.x = x - split - t * 10; R.x = x + split + t * 10
     L.rot = -k * 0.35; R.rot = k * 0.3
-    L.scale = R.scale = 1 - k * 0.18
+    L.scale = R.scale = S * (1 - k * 0.18)
     L.alpha = R.alpha = 1 - k
-    if (Math.random() < 0.6 && k < 0.9) w.parts.spawn(P.Smoke, x + rand(-80, 80), y + rand(-150, 150), rand(-20, 20), -30, 1.8, 10, 40, t > 2 ? C.ice : C.smokeDark, 0.4)
-    if (Math.random() < 0.08 && k < 0.8) explode(w, x + rand(-60, 60), y + rand(-150, 150), 'medium', true, C.orange, true)
+    if (Math.random() < 0.6 && k < 0.9) w.parts.spawn(P.Smoke, x + rand(-92, 92), y + rand(-172, 172), rand(-20, 20), -30, 1.8, 10, 40, t > 2 ? C.ice : C.smokeDark, 0.4)
+    if (Math.random() < 0.08 && k < 0.8) explode(w, x + rand(-70, 70), y + rand(-172, 172), 'medium', true, C.orange, true)
     if (t < 5.4) w.after(0.03, tick)
     else { L.alpha = R.alpha = 0; L.y = R.y = 9999 }
   }
   tick()
-  w.after(3.2, () => { for (let i = 0; i < 4; i++) w.parts.spawn(P.Ring, x, y, 0, 0, 1.4 + i * 0.3, 60, 320 + i * 80, C.ice, 0, true) })
+  w.after(3.2, () => { for (let i = 0; i < 4; i++) w.parts.spawn(P.Ring, x, y, 0, 0, 1.4 + i * 0.3, 60, (320 + i * 80) * S, C.ice, 0, true) })
 }
 
 export function spawnTidebreaker(w: World) {
-  const e = w.spawn('m2_tidebreaker', PW / 2, -260)
+  const e = w.spawn('m2_tidebreaker', PW / 2, -300)
   e.s.mode = Mode.Intro
   e.s.phase = 1
   e.s.sub = 1
@@ -379,9 +384,9 @@ export function spawnTidebreaker(w: World) {
   e.s.cloak = 1
   e.r = 1
   const parts: Enemy[] = []
-  parts.push(w.spawn('m2_tide_vls', e.x, e.y - 150, { parent: e, ox: 0, oy: -150, tag: 'vls' }))
-  parts.push(w.spawn('m2_tide_tower', e.x, e.y - 60, { parent: e, ox: 0, oy: -60, tag: 'tower' }))
-  for (const ox of [-34, 34]) parts.push(w.spawn('m2_tide_tube', e.x + ox, e.y + 80, { parent: e, ox, oy: 80, tag: 'tube' }))
+  parts.push(w.spawn('m2_tide_vls', e.x, e.y - 150 * S, { parent: e, ox: 0, oy: -150 * S, tag: 'vls' }))
+  parts.push(w.spawn('m2_tide_tower', e.x, e.y - 60 * S, { parent: e, ox: 0, oy: -60 * S, tag: 'tower' }))
+  for (const ox of [-34 * S, 34 * S]) parts.push(w.spawn('m2_tide_tube', e.x + ox, e.y + 80 * S, { parent: e, ox, oy: 80 * S, tag: 'tube' }))
   for (const p of parts) p.hidden = true
   startBoss(w, e, 'Tidebreaker — leviathan submarine', parts)
   return e

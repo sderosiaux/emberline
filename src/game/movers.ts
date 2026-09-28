@@ -25,7 +25,12 @@ export class PathMover implements Mover {
     for (let i = 0; i < pts.length - 1; i++) lensPush(this.lens, pts[i], pts[i + 1])
   }
   update(e: Enemy, _w: World, dt: number) {
-    if (this.done) { e.x += e.vx * dt; e.y += e.vy * dt; return }
+    if (this.done) {
+      // Keep flying along the final tangent at path speed so exits actually leave the screen.
+      e.x += e.vx * dt; e.y += e.vy * dt
+      if (e.x < -60 || e.x > PW + 60 || e.y < -60 || e.y > PH + 60) e.gone = true
+      return
+    }
     const n = this.pts.length
     this.u += (this.speed * dt) / Math.max(1, this.lens[this.seg])
     while (this.u >= 1) {
@@ -33,7 +38,14 @@ export class PathMover implements Mover {
       this.seg++
       if (this.seg >= n - 1) {
         if (this.loop) this.seg = 0
-        else { this.done = true; this.seg = n - 2; this.u = 1; break }
+        else {
+          this.done = true; this.seg = n - 2; this.u = 1
+          const [ax, ay] = this.pts[n - 2], [bx, by] = this.pts[n - 1]
+          const len = Math.hypot(bx - ax, by - ay) || 1
+          e.vx = ((bx - ax) / len) * this.speed; e.vy = ((by - ay) / len) * this.speed
+          e.x = bx; e.y = by
+          return
+        }
       }
     }
     const p0 = this.pts[Math.max(0, this.seg - 1)], p1 = this.pts[this.seg], p2 = this.pts[this.seg + 1], p3 = this.pts[Math.min(n - 1, this.seg + 2)]

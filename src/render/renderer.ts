@@ -2,7 +2,7 @@ import type { World } from '../game/world'
 import type { Background } from './backgrounds'
 import { getSprite, drawSprite, drawShadow, glowTexture, hasSprite } from './sprites'
 import { bulletTex } from './bullets'
-import { PW, PH, FIELD_X, SCREEN_W, SCREEN_H } from '../game/consts'
+import { PW, PH, SCREEN_W, SCREEN_H, FIELD_W, ZOOM } from '../game/consts'
 import { Sunline, Aegis, Lantern, Halo } from '../game/weapons'
 import { specialFx } from '../game/specials'
 import { PickupKind } from '../game/entities'
@@ -47,18 +47,18 @@ export class Renderer {
     this.hud.width = Math.floor(cw * dpr)
     this.hud.height = Math.floor(ch * dpr)
     this.scale = this.hud.width / SCREEN_W
-    this.canvas.style.left = `${FIELD_X * s}px`
-    this.canvas.style.width = `${PW * s}px`
+    this.canvas.style.left = '0px'
+    this.canvas.style.width = `${FIELD_W * s}px`
     this.canvas.style.height = `${ch}px`
-    this.canvas.width = Math.round(PW * this.scale)
+    this.canvas.width = Math.round(FIELD_W * this.scale)
     this.canvas.height = this.hud.height
     this.generation++
   }
 
-  /** Playfield layer, in logical 1280×720 coordinates (only the field area is visible). */
+  /** Playfield layer, in world coordinates (PW×PH), zoomed to fill the field. */
   begin() {
     const c = this.ctx
-    c.setTransform(this.scale, 0, 0, this.scale, -FIELD_X * this.scale, 0)
+    c.setTransform(this.scale * ZOOM, 0, 0, this.scale * ZOOM, 0, 0)
     c.imageSmoothingEnabled = true
     c.imageSmoothingQuality = 'medium'
     return c
@@ -78,7 +78,6 @@ export class Renderer {
   drawField(w: World, bg: Background | null) {
     const c = this.begin()
     c.save()
-    c.translate(FIELD_X, 0)
     c.fillStyle = '#20202a'
     c.fillRect(0, 0, PW, PH)
     c.translate(w.shakeX, w.shakeY)
@@ -88,7 +87,7 @@ export class Renderer {
     c.restore()
     if (w.flashScreen > 0) {
       c.fillStyle = `rgba(255,248,235,${Math.min(0.8, w.flashScreen)})`
-      c.fillRect(FIELD_X, 0, PW, PH)
+      c.fillRect(0, 0, PW, PH)
     }
   }
 }

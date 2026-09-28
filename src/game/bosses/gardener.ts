@@ -20,36 +20,38 @@ import { audio } from '../../audio/audio'
  *   3 MURMUR  — below 40%: curving galaxy arms and a flock of songbirds.
  */
 
-const R_PETAL = 84
+/** Boss scale for the wide field (art is painted at 1×). */
+const S = 1.3
+const R_PETAL = 109
 
 bossDef({
-  id: 'garden_gardener', hp: 11500, r: 44, sprite: 'garden_core', explode: 'huge', score: 40000,
+  id: 'garden_gardener', hp: 13500, r: 57, scale: S, sprite: 'garden_core', explode: 'huge', score: 40000,
   update(e, w, dt) { gardenerUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
     const s = e.s
     const breathe = 1 + Math.sin(w.time * 1.3) * 0.03
     ctx.globalCompositeOperation = 'lighter'
     ctx.globalAlpha = 0.35
-    const g = ctx.createRadialGradient(e.x, e.y, 10, e.x, e.y, 170)
+    const g = ctx.createRadialGradient(e.x, e.y, 10, e.x, e.y, 220)
     g.addColorStop(0, 'rgba(255,240,200,0.6)')
     g.addColorStop(1, 'rgba(160,130,255,0)')
     ctx.fillStyle = g
-    ctx.beginPath(); ctx.arc(e.x, e.y, 170, 0, TAU); ctx.fill()
+    ctx.beginPath(); ctx.arc(e.x, e.y, 220, 0, TAU); ctx.fill()
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
     const ringAlpha = s.phase === 2 ? 1 : 0.8
-    drawSprite(ctx, getSprite('garden_ring'), e.x, e.y, (s.ring ?? 0), breathe * (s.phase === 3 ? 0.85 : 1), ringAlpha)
-    drawSprite(ctx, getSprite('garden_ring'), e.x, e.y, -(s.ring ?? 0) * 1.7, 0.72 * breathe, 0.6)
-    drawSprite(ctx, getSprite('garden_core'), e.x, e.y, s.phase === 2 ? Math.round((s.ring ?? 0) * 6 / TAU) * TAU / 6 : Math.sin(w.time * 0.4) * 0.2, breathe, 1, e.flash)
+    drawSprite(ctx, getSprite('garden_ring'), e.x, e.y, (s.ring ?? 0), S * breathe * (s.phase === 3 ? 0.85 : 1), ringAlpha)
+    drawSprite(ctx, getSprite('garden_ring'), e.x, e.y, -(s.ring ?? 0) * 1.7, S * 0.72 * breathe, 0.6)
+    drawSprite(ctx, getSprite('garden_core'), e.x, e.y, s.phase === 2 ? Math.round((s.ring ?? 0) * 6 / TAU) * TAU / 6 : Math.sin(w.time * 0.4) * 0.2, S * breathe, 1, e.flash)
   },
 })
 
 bossDef({
-  id: 'garden_petal', hp: 1200, r: 22, sprite: 'garden_petal', explode: 'medium', score: 3000,
+  id: 'garden_petal', hp: 1200, r: 29, scale: S, sprite: 'garden_petal', explode: 'medium', score: 3000,
   update(e, w, dt) {
     const root = e.parent!
     const a = (root.s.ring ?? 0) * 0.6 + e.s.slot * (TAU / 6)
-    const r = R_PETAL + Math.sin(w.time * 1.3 + e.s.slot) * 6
+    const r = R_PETAL + Math.sin(w.time * 1.3 + e.s.slot) * 8
     e.x = root.x + Math.cos(a) * r
     e.y = root.y + Math.sin(a) * r
     e.rot = a - Math.PI / 2
@@ -66,8 +68,8 @@ bossDef({
   },
   drawBody(ctx, e) {
     // offset so the base sits toward the core and the tip points out
-    const ox = Math.cos(e.s.ang ?? 0) * 18, oy = Math.sin(e.s.ang ?? 0) * 18
-    drawSprite(ctx, getSprite('garden_petal'), e.x + ox * 0.3, e.y + oy * 0.3, e.rot, 0.9, 1, e.flash)
+    const ox = Math.cos(e.s.ang ?? 0) * 18 * S, oy = Math.sin(e.s.ang ?? 0) * 18 * S
+    drawSprite(ctx, getSprite('garden_petal'), e.x + ox * 0.3, e.y + oy * 0.3, e.rot, 0.9 * S, 1, e.flash)
   },
   onDeath(e, w) {
     partDown(w, e, 'medium')
@@ -80,8 +82,8 @@ function gardenerUpdate(e: Enemy, w: World, dt: number) {
   s.time = (s.time ?? 0) + dt
   s.ring = (s.ring ?? 0) + dt * (s.phase === 2 ? 0.15 : 0.35)
   if (s.intro) {
-    e.y += (175 - e.y) * Math.min(1, dt * 0.6)
-    if (Math.abs(e.y - 175) < 3) s.intro = 0
+    e.y += (165 - e.y) * Math.min(1, dt * 0.6)
+    if (Math.abs(e.y - 165) < 3) s.intro = 0
     return
   }
   const petals = alive(w.bossParts, 'petal')
@@ -97,9 +99,9 @@ function gardenerUpdate(e: Enemy, w: World, dt: number) {
   }
 
   // movement: a slow lemniscate that widens as it wakes
-  const amp = s.phase === 1 ? 70 : s.phase === 2 ? 120 : 40
+  const amp = s.phase === 1 ? 105 : s.phase === 2 ? 180 : 60
   const tx = PW / 2 + Math.sin(s.time * 0.3) * amp
-  const ty = 170 + Math.sin(s.time * 0.6) * (s.phase === 2 ? 30 : 14)
+  const ty = 162 + Math.sin(s.time * 0.6) * (s.phase === 2 ? 25 : 12)
   e.x += (tx - e.x) * Math.min(1, dt * 0.8)
   e.y += (ty - e.y) * Math.min(1, dt * 0.8)
 
@@ -120,7 +122,7 @@ function gardenerUpdate(e: Enemy, w: World, dt: number) {
       if (s.mirF <= 0) {
         s.mirF = 0.09
         const off = 0.35 + Math.abs(Math.sin(s.mir * 1.1)) * 0.9
-        for (const sgn of [-1, 1]) w.fire(e.x + sgn * 40, e.y + 20, Math.PI / 2 + sgn * off, 170, BulletKind.Needle, 10)
+        for (const sgn of [-1, 1]) w.fire(e.x + sgn * 52, e.y + 26, Math.PI / 2 + sgn * off, 170, BulletKind.Needle, 10)
       }
     }
   } else {
@@ -169,7 +171,7 @@ function bloom(w: World, x: number, y: number, n: number, off: number) {
       }
     }
   }
-  w.parts.spawn(P.Ring, x, y, 0, 0, 0.5, 20, 120, C.gold)
+  w.parts.spawn(P.Ring, x, y, 0, 0, 0.5, 26, 156, C.gold)
   enemySfx(w, x, true)
 }
 
@@ -186,10 +188,10 @@ function star(w: World, x: number, y: number, rot: number) {
 }
 
 function summonFlock(w: World, e: Enemy) {
-  const n = 10
+  const n = 12
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU
-    const b = w.spawn('garden_songbird', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60)
+    const b = w.spawn('garden_songbird', e.x + Math.cos(a) * 78, e.y + Math.sin(a) * 78)
     b.s.orbit = 1
     b.s.oa = a
     b.parent = null
@@ -198,7 +200,7 @@ function summonFlock(w: World, e: Enemy) {
 }
 
 export function spawnGardener(w: World) {
-  const e = w.spawn('garden_gardener', PW / 2, -150)
+  const e = w.spawn('garden_gardener', PW / 2, -190)
   e.s.intro = 1
   e.s.phase = 1
   e.armor = 0.25

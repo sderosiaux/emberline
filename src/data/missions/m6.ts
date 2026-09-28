@@ -21,7 +21,7 @@ registerEnemy({
   init(e) { e.s.aim = rand(0, TAU); e.s.dormant = 1 },
   update(e, w) {
     if (e.s.dormant) {
-      if (e.y < 90) return
+      if (e.y < 75) return
       e.s.dormant = 0
       sparks(w, e.x, e.y, 10, C.magenta, 180, 0.35, true)
       w.parts.spawn(P.Flash, e.x, e.y, 0, 0, 0.15, 10, 30, C.magenta, 0, true)
@@ -191,9 +191,9 @@ function hulkUpdate(e: Enemy, w: World, dt: number) {
   s.t = (s.t ?? 0) + dt
   // swing the bow toward starboard and cruise across the field, holding station against the scroll
   e.rot += clamp(angleDiff(e.rot, -Math.PI / 2), -0.28 * dt, 0.28 * dt)
-  s.vx = Math.min(30, (s.vx ?? 0) + dt * 8)
+  s.vx = Math.min(40, (s.vx ?? 0) + dt * 10)
   e.x += s.vx * dt
-  e.y += ((200 + Math.sin(s.t * 0.5) * 15) - e.y) * Math.min(1, dt * 0.6)
+  e.y += ((170 + Math.sin(s.t * 0.5) * 13) - e.y) * Math.min(1, dt * 0.6)
   if (Math.random() < 0.6) w.parts.spawn(P.Smoke, e.x + Math.sin(e.rot) * 150, e.y - Math.cos(e.rot) * 150, Math.sin(e.rot) * 60, -Math.cos(e.rot) * 60, 0.6, 5, 14, C.violet, 0.5)
   // reactor pulse from the bridge once its guns are gone
   const guns = w.enemies.some((p) => p.parent === e && !p.dead)
@@ -214,7 +214,7 @@ function hulkSetPiece(w: World, x: number) {
     update(ww, dt) {
       d.y += ww.scroll * dt
       if (Math.random() < 0.08) sparks(ww, d.x + rand(-40, 40), d.y + rand(-100, 100), 2, C.orange, 120, 0.3, true)
-      if (d.y < 150) return
+      if (d.y < 130) return
       fx.gone = true
       const e = ww.spawn('m6_hulk', d.x, d.y, { rot: d.rot })
       for (const [id, bx, by] of HULK_PARTS) ww.spawn(id, e.x + bx, e.y + by, { parent: e, ox: bx, oy: by, data: { bx, by } satisfies Base })
@@ -224,9 +224,9 @@ function hulkSetPiece(w: World, x: number) {
       const escort = (t: number, id: string, n: number, gap: number, f: Formation) => {
         for (let i = 0; i < n; i++) ww.after(t + i * gap, () => { if (e.dead || e.gone) return; const sl = f(i, n); ww.spawn(id, sl.x, sl.y, { mover: sl.mover }) })
       }
-      escort(5, 'dart', 6, 0.25, F.swoop(1, 0.35))
-      escort(10, 'seeker', 4, 0.4, F.seek(PW * 0.2))
-      escort(15, 'phantom', 2, 0.5, F.swoop(-1, 0.3, 170))
+      escort(5, 'dart', 8, 0.2, F.swoop(1, 0.35, 300))
+      escort(10, 'seeker', 5, 0.35, F.seek(PW * 0.2))
+      escort(15, 'phantom', 3, 0.45, F.swoop(-1, 0.3, 220))
       ww.emit({ type: 'radio', who: 'CHOIR', text: 'RISE, CAPTAIN. YOUR CREW IS WAITING.', tone: 'enemy' })
       if (!ww.preview) sfxAt('boss_phase', d.x, 0.7)
     },
@@ -287,7 +287,7 @@ function courier(w: World, x: number, y: number) {
   explode(w, x, y, 'small', true)
   sparks(w, x, y, 18, C.violet, 260, 0.5)
   const e = w.spawn('escapee', x, y)
-  e.vx = x < PW / 2 ? 120 : -120
+  e.vx = x < PW / 2 ? 156 : -156
   e.onDeath = (ww, en) => {
     ww.pickup(PickupKind.Core, en.x, en.y, 0, 'core_chorus')
     ww.secret('courier', 'Caught the courier')
@@ -309,89 +309,97 @@ export const m6: MissionDef = {
     'Go in slow. Whatever is waking those wrecks, put it back to sleep.',
   ],
   script(L) {
+    const X = (f: number) => PW * f
     // ── quiet opening: dead ships, sparks, nothing moving ──
     L.at(0).intensity(0).radio('HALLORAN', "You're in the graveyard, Kestrel. Eleven hundred of ours are out here. Mind your manners.")
-    wreck(L.at(0), 'prop_wreck_cruiser', 150, { y: -320, depth: 0.7, rot: -0.2, lights: [[-30, -40], [20, 60]] })
-    wreck(L.at(1), 'prop_hull_section', 440, { y: -150, rot: 0.6 })
-    L.at(3).wave('m6_debris_s', 1, 0, drift(380, 40, -8)).wave('m6_debris', 1, 0, drift(90, 35, 6))
-    wreck(L.at(5), 'prop_wreck_frigate', 420, { y: -300, depth: 0.85, rot: 0.35 })
-    L.at(6).radio('KESTREL', "Sensors keep counting hulls that aren't there. Then counting them again.")
-    L.at(8).wave('m6_debris_s', 2, 1.5, drift(250, 45, 10))
-    L.at(9.5).radio('HALLORAN', 'Scopes are clean. Too clean.')
+    wreck(L.at(0), 'prop_wreck_cruiser', X(0.24), { y: -320, depth: 0.7, rot: -0.2, lights: [[-30, -40], [20, 60]] })
+    wreck(L.at(1), 'prop_hull_section', X(0.8), { y: -150, rot: 0.6 })
+    L.at(2.5).wave('m6_debris_s', 1, 0, drift(X(0.66), 40, -10)).wave('m6_debris', 1, 0, drift(X(0.14), 35, 8)).wave('m6_debris_s', 1, 0, drift(X(0.92), 45, -6))
+    wreck(L.at(4), 'prop_wreck_frigate', X(0.72), { y: -300, depth: 0.85, rot: 0.35 })
+    L.at(5).radio('KESTREL', "Sensors keep counting hulls that aren't there. Then counting them again.")
+    L.at(6.5).wave('m6_debris_s', 3, 1.2, drift(X(0.44), 45, 12))
+    L.at(8).radio('HALLORAN', 'Scopes are clean. Too clean.')
     // ── first ambush ──
-    L.at(11.5).intensity(2).radio('CHOIR', 'YOU FLY OVER GRAVES, EMBER. THE GRAVES ARE AWAKE.', 'enemy')
-      .wave('phantom', 4, 0.3, F.hover(180, 7, 110, PW - 110))
-    L.at(12.5).radio('KESTREL', 'Contacts! Right on top of me. Cloaked!')
-    L.at(15).wave('dart', 6, 0.22, F.swoop(-1, 0.4)).wave('dart', 6, 0.22, F.swoop(1, 0.4))
-    wreck(L.at(16), 'prop_hull_section', 150, { y: -120, rot: -0.3 })
-    L.at(16).ground('m6_wreck_gun', 125, { y: -140 }).ground('m6_wreck_gun', 180, { y: -100 })
-    L.at(19).gate()
+    L.at(9.5).intensity(2).radio('CHOIR', 'YOU FLY OVER GRAVES, EMBER. THE GRAVES ARE AWAKE.', 'enemy')
+      .wave('phantom', 6, 0.25, F.hover(150, 6, X(0.12), X(0.88)))
+    L.at(10.5).radio('KESTREL', 'Contacts! Right on top of me. Cloaked!')
+    L.at(12.5).wave('dart', 8, 0.18, F.swoop(-1, 0.4, 310)).wave('dart', 8, 0.18, F.swoop(1, 0.4, 310))
+    wreck(L.at(13), 'prop_hull_section', X(0.25), { y: -120, rot: -0.3 })
+    wreck(L.at(13), 'prop_hull_section', X(0.8), { y: -200, rot: 0.5 })
+    L.at(13).ground('m6_wreck_gun', X(0.21), { y: -140 }).ground('m6_wreck_gun', X(0.3), { y: -100 })
+      .ground('m6_wreck_gun', X(0.77), { y: -230 }).ground('m6_wreck_gun', X(0.84), { y: -180 })
+    L.at(15.5).wave('dart', 7, 0.1, F.vee(X(0.5), 170))
+    L.at(17).gate(12)
     // ── mines among the debris ──
-    L.at(21).radio('HALLORAN', 'Mines drifting in the debris. Old ones, ours. Somebody re-armed them.')
-      .wave('mine', 1, 0, drift(120, 50)).wave('mine', 1, 0, drift(300, 50)).wave('mine', 1, 0, drift(460, 50))
-      .wave('m6_debris', 1, 0, drift(210, 55)).wave('m6_debris_s', 1, 0, drift(380, 55))
-    L.at(23).wave('weaver', 4, 0.5, F.sine(PW * 0.3, 70, 2, 110)).wave('mine', 1, 0, drift(220, 50)).wave('mine', 1, 0, drift(400, 50))
-    L.at(26).wave('splitter', 2, 0.8, F.hover(160, 7, 150, PW - 150)).wave('m6_debris_l', 1, 0, drift(80, 40, 10))
-    wreck(L.at(27), 'prop_wreck_frigate', 110, { y: -300, rot: -0.5 })
-    L.at(29).wave('gunship', 1, 0, F.hoverAt(PW / 2, 150, 11))
-      .wave('mender', 1, 0, F.hoverAt(PW / 2 - 95, 110, 13)).wave('mender', 1, 0, F.hoverAt(PW / 2 + 95, 110, 13))
-    L.at(30).radio('HALLORAN', 'Menders on that gunship. Cut the medics first or you will be here all night.')
-    L.at(34).wave('phantom', 2, 0.6, F.swoop(-1, 0.35, 180))
-    L.at(37).gate(24)
+    L.at(18).radio('HALLORAN', 'Mines drifting in the debris. Old ones, ours. Somebody re-armed them.')
+      .wave('mine', 1, 0, drift(X(0.15), 50)).wave('mine', 1, 0, drift(X(0.38), 50)).wave('mine', 1, 0, drift(X(0.62), 50)).wave('mine', 1, 0, drift(X(0.85), 50))
+      .wave('m6_debris', 1, 0, drift(X(0.27), 55)).wave('m6_debris_s', 1, 0, drift(X(0.73), 55))
+    L.at(20).wave('weaver', 5, 0.4, F.sine(X(0.28), 100, 2, 130)).wave('weaver', 5, 0.4, F.sine(X(0.72), 100, 2, 130))
+      .wave('mine', 1, 0, drift(X(0.5), 50)).wave('mine', 1, 0, drift(X(0.22), 50))
+    L.at(22.5).wave('splitter', 3, 0.6, F.hover(135, 6, X(0.2), X(0.8))).wave('m6_debris_l', 1, 0, drift(X(0.1), 40, 12))
+    wreck(L.at(23), 'prop_wreck_frigate', X(0.18), { y: -300, rot: -0.5 })
+    L.at(24.5).wave('gunship', 1, 0, F.hoverAt(X(0.5), 125, 10))
+      .wave('mender', 1, 0, F.hoverAt(X(0.34), 95, 12)).wave('mender', 1, 0, F.hoverAt(X(0.66), 95, 12))
+    L.at(25.5).radio('HALLORAN', 'Menders on that gunship. Cut the medics first or you will be here all night.')
+    L.at(28).wave('phantom', 3, 0.45, F.swoop(-1, 0.35, 230)).wave('phantom', 2, 0.5, F.swoop(1, 0.35, 230))
+    L.at(31).gate(14)
     // ── the wreck that wakes ──
-    L.at(39).do((w) => hulkSetPiece(w, 175)).wave('m6_debris_s', 2, 2, drift(420, 45))
-    L.at(44).radio('KESTREL', "That frigate. Its reactor just ticked over. Halloran, that's not possible.")
-    L.at(40).do((w) => holdUntil(w, 'hulk_done'))
-    L.at(48).gate(55)
+    L.at(32).do((w) => hulkSetPiece(w, X(0.31))).wave('m6_debris_s', 3, 1.5, drift(X(0.78), 45))
+    L.at(33).do((w) => holdUntil(w, 'hulk_done'))
+    L.at(36.5).radio('KESTREL', "That frigate. Its reactor just ticked over. Halloran, that's not possible.")
+    L.at(40).gate(45)
     // ── wardens, missiles and lancers forcing movement ──
-    L.at(51).intensity(2)
-    L.at(52).wave('mine', 1, 0, drift(100, 50)).wave('mine', 1, 0, drift(460, 50)).wave('phantom', 2, 0.5, F.hover(200, 6, 180, PW - 180), { elite: true })
-    L.at(56).wave('warden', 1, 0, F.hoverAt(PW / 2, 125, 12))
-      .wave('missileer', 2, 0.3, F.hover(165, 11, PW / 2 - 70, PW / 2 + 70))
-    L.at(57).radio('HALLORAN', 'Warden bubble. Nothing inside it takes damage while it lives.')
-    L.at(59).wave('lancer', 3, 0.5, F.spreadSelf(100, PW - 100))
-    L.at(63).wave('lancer', 3, 0.5, F.spreadSelf(140, PW - 140))
-    L.at(66).gate()
+    L.at(42).intensity(2)
+    L.at(43).wave('mine', 1, 0, drift(X(0.12), 50)).wave('mine', 1, 0, drift(X(0.88), 50)).wave('mine', 1, 0, drift(X(0.5), 45))
+      .wave('phantom', 3, 0.4, F.hover(170, 6, X(0.22), X(0.78)), { elite: true })
+    L.at(46).wave('warden', 1, 0, F.hoverAt(X(0.5), 105, 11))
+      .wave('missileer', 3, 0.3, F.hover(140, 10, X(0.5) - 95, X(0.5) + 95))
+    L.at(47).radio('HALLORAN', 'Warden bubble. Nothing inside it takes damage while it lives.')
+    L.at(48.5).wave('lancer', 4, 0.4, F.spreadSelf(X(0.12), X(0.88)))
+    L.at(51.5).wave('lancer', 4, 0.4, F.spreadSelf(X(0.22), X(0.78))).wave('dart', 7, 0.16, F.swoop(-1, 0.3, 300))
+    L.at(54).gate(13)
     // ── the courier (secret) ──
-    L.at(68).do((w) => {
-      const d: Decor = { sprite: 'prop_hull_section', x: 170, y: -80, rot: 0.9, scale: 1, depth: 1, vx: 0, alpha: 1, above: false }
+    L.at(55).do((w) => {
+      const d: Decor = { sprite: 'prop_hull_section', x: X(0.3), y: -80, rot: 0.9, scale: 1, depth: 1, vx: 0, alpha: 1, above: false }
       w.decor.push(d)
-      w.after(9.5, () => courier(w, d.x + 10, d.y))
+      w.after(8, () => courier(w, d.x + 10, d.y))
     })
-    L.at(70).wave('m6_debris', 2, 1, drift(360, 50, -10)).ground('m6_wreck_gun', 430, { y: -60 })
-    L.at(74).wave('splitter', 2, 0.6, F.hover(150, 7, 320, PW - 90))
-    L.at(77.6).wave('dart', 5, 0.15, F.vee(PW * 0.65, 150))
-    wreck(L.at(80), 'prop_wreck_cruiser', 430, { y: -330, depth: 0.8, rot: 0.25 })
-    L.at(81).ground('m6_wreck_gun', 400, { y: -150 }).ground('m6_wreck_gun', 470, { y: -110 })
-    L.at(84).gate()
+    L.at(57).wave('m6_debris', 2, 1, drift(X(0.64), 50, -12)).ground('m6_wreck_gun', X(0.77), { y: -60 }).ground('m6_wreck_gun', X(0.9), { y: -120 })
+    L.at(60).wave('splitter', 3, 0.5, F.hover(130, 6, X(0.55), X(0.88)))
+    L.at(62.6).wave('dart', 7, 0.1, F.vee(X(0.66), 170))
+    wreck(L.at(65), 'prop_wreck_cruiser', X(0.77), { y: -330, depth: 0.8, rot: 0.25 })
+    L.at(66).ground('m6_wreck_gun', X(0.71), { y: -150 }).ground('m6_wreck_gun', X(0.84), { y: -110 })
+    L.at(69).gate(13)
     // ── escalation ──
-    L.at(86).intensity(3).radio('HALLORAN', 'Kestrel, the field ahead is moving. Hulls pulling together. Something is gathering them.')
-    L.at(87).wave('phantom', 5, 0.35, F.hover(170, 7, 80, PW - 80))
-    L.at(90).wave('mine', 1, 0, drift(160, 60)).wave('mine', 1, 0, drift(280, 60)).wave('mine', 1, 0, drift(400, 60))
-    L.at(92).wave('gunship', 2, 0.6, F.hover(140, 11, 150, PW - 150))
-      .wave('mender', 2, 0.6, F.hover(95, 13, 90, PW - 90))
-    L.at(96).wave('weaver', 6, 0.4, F.cross([[-30, 90], [PW * 0.5, 280], [PW + 40, 440]], 190))
-    L.at(99).gate(26)
-    L.at(101).wave('m6_debris_l', 1, 0, drift(140, 60)).wave('m6_debris', 1, 0, drift(300, 70)).wave('m6_debris_l', 1, 0, drift(460, 55))
-      .wave('m6_debris_s', 3, 0.4, drift(220, 80))
-    L.at(103).wave('lancer', 4, 0.4, F.spreadSelf(90, PW - 90)).wave('seeker', 4, 0.3, F.seek(PW * 0.2))
-    L.at(107).gate()
+    L.at(70).intensity(3).radio('HALLORAN', 'Kestrel, the field ahead is moving. Hulls pulling together. Something is gathering them.')
+    L.at(71).wave('phantom', 7, 0.28, F.hover(145, 6, X(0.08), X(0.92)))
+    L.at(73.5).wave('mine', 1, 0, drift(X(0.2), 60)).wave('mine', 1, 0, drift(X(0.35), 60)).wave('mine', 1, 0, drift(X(0.5), 60))
+      .wave('mine', 1, 0, drift(X(0.65), 60)).wave('mine', 1, 0, drift(X(0.8), 60))
+    L.at(75.5).wave('gunship', 3, 0.5, F.hover(120, 8, X(0.2), X(0.8)))
+      .wave('mender', 3, 0.5, F.hover(80, 9, X(0.12), X(0.88)))
+    L.at(79).wave('weaver', 8, 0.3, F.cross([[-30, 80], [PW * 0.5, 240], [PW + 40, 380]], 250))
+    L.at(82).gate(14)
+    L.at(83).wave('m6_debris_l', 1, 0, drift(X(0.2), 60)).wave('m6_debris', 1, 0, drift(X(0.4), 70)).wave('m6_debris_l', 1, 0, drift(X(0.62), 55))
+      .wave('m6_debris', 1, 0, drift(X(0.85), 65)).wave('m6_debris_s', 4, 0.35, drift(X(0.35), 80))
+    L.at(85).wave('lancer', 6, 0.3, F.spreadSelf(X(0.1), X(0.9))).wave('seeker', 4, 0.3, F.seek(X(0.2))).wave('seeker', 3, 0.3, F.seek(X(0.8)))
+    L.at(89).gate(12)
     // ── the gun line: a spine of dead hulls whose point-defence all wakes at once ──
-    wreck(L.at(109), 'prop_wreck_cruiser', 110, { y: -330, rot: -0.15 })
-    wreck(L.at(109), 'prop_hull_section', 450, { y: -160, rot: 0.4 })
-    L.at(110).ground('m6_wreck_gun', 90, { y: -120 }).ground('m6_wreck_gun', 140, { y: -200 }).ground('m6_wreck_gun', 430, { y: -60 }).ground('m6_wreck_gun', 480, { y: -130 })
-      .wave('mine', 1, 0, drift(280, 45)).wave('mine', 1, 0, drift(220, 45)).wave('mine', 1, 0, drift(340, 45))
-    L.at(113).radio('KESTREL', 'Every gun on that spine just woke up.')
-      .wave('warden', 1, 0, F.hoverAt(PW / 2, 115, 11)).wave('splitter', 2, 0.4, F.hover(160, 10, PW / 2 - 90, PW / 2 + 90))
-    L.at(117).wave('phantom', 3, 0.3, F.hover(200, 7, 120, PW - 120), { elite: true })
-    L.at(120).wave('seeker', 6, 0.25, F.seek(PW * 0.5)).wave('m6_debris_l', 1, 0, drift(300, 60))
-    L.at(123).gate()
+    wreck(L.at(90), 'prop_wreck_cruiser', X(0.17), { y: -330, rot: -0.15 })
+    wreck(L.at(90), 'prop_hull_section', X(0.81), { y: -160, rot: 0.4 })
+    L.at(91).ground('m6_wreck_gun', X(0.13), { y: -120 }).ground('m6_wreck_gun', X(0.22), { y: -200 }).ground('m6_wreck_gun', X(0.29), { y: -150 })
+      .ground('m6_wreck_gun', X(0.77), { y: -60 }).ground('m6_wreck_gun', X(0.86), { y: -130 }).ground('m6_wreck_gun', X(0.72), { y: -180 })
+      .wave('mine', 1, 0, drift(X(0.5), 45)).wave('mine', 1, 0, drift(X(0.4), 45)).wave('mine', 1, 0, drift(X(0.6), 45))
+    L.at(94).radio('KESTREL', 'Every gun on that spine just woke up.')
+      .wave('warden', 1, 0, F.hoverAt(X(0.5), 100, 10)).wave('splitter', 3, 0.4, F.hover(135, 9, X(0.5) - 130, X(0.5) + 130))
+    L.at(97.5).wave('phantom', 4, 0.3, F.hover(170, 6, X(0.15), X(0.85)), { elite: true })
+    L.at(100).wave('seeker', 8, 0.2, F.seek(X(0.5))).wave('m6_debris_l', 1, 0, drift(X(0.5), 60))
+    L.at(103).gate(14)
     // ── boss ──
-    L.at(124).intensity(1).scroll(12, 5).radio('HALLORAN', "That's not debris. That's a keel. They've stitched the fleet into one ship.")
-    L.at(128).do((w) => spawnRevenant(w))
-    L.at(129).until('boss_dead')
-    L.at(131).radio('KESTREL', 'Rest easy, Verge.')
-    L.at(134).radio('HALLORAN', "Graveyard's gone quiet. The signal came from deeper in. We follow it home.")
-    L.at(136).do(() => {})
+    L.at(104).intensity(1).scroll(12, 5).radio('HALLORAN', "That's not debris. That's a keel. They've stitched the fleet into one ship.")
+    L.at(108).do((w) => spawnRevenant(w))
+    L.at(109).until('boss_dead')
+    L.at(111).radio('KESTREL', 'Rest easy, Verge.')
+    L.at(114).radio('HALLORAN', "Graveyard's gone quiet. The signal came from deeper in. We follow it home.")
+    L.at(116).do(() => {})
   },
 }

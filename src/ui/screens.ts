@@ -40,14 +40,14 @@ export function titleScreen(app: App): Screen {
       ),
       h('div', { class: 'title-foot' }, 'Arrows / WASD move · Space / Z fire · X special · Shift precision · Esc pause', h('br'), 'Gamepad supported.'),
     ),
-    h('div', { class: 'title-right paper' },
+    h('div', { class: 'title-right' },
       h('div', { class: 'kicker' }, 'Service record'),
       h('div', { class: 'rule' }),
       h('div', { class: 'stat-row' }, h('span', null, 'Best campaign score'), h('b', null, fmt(app.records.bestScore))),
       h('div', { class: 'stat-row' }, h('span', null, 'Campaigns completed'), h('b', null, `${app.records.completedDifficulties.length}`)),
       h('div', { class: 'stat-row' }, h('span', null, 'Secrets ever found'), h('b', null, `${app.records.secretsEver.length}`)),
       c ? h('div', { class: 'stat-row' }, h('span', null, 'Current difficulty'), h('b', null, DIFFICULTIES[c.difficulty].name)) : null,
-      h('div', { style: 'margin-top:auto;font-size:12px;color:var(--muted);line-height:1.6' },
+      h('div', { style: 'margin-top:auto;font-size:11.5px;color:#8d889c;line-height:1.6' },
         'Between missions, Dasha sells guns. Guns change how you fly. The reactor decides how long you can keep flying like that.'),
     ),
   )
@@ -258,7 +258,7 @@ export function failedScreen(app: App): Screen {
 
 export function resultsScreen(app: App, r: MissionResult, c: Campaign): Screen {
   const s = r.stats
-  const acc = s.shotsFired ? Math.round((s.shotsHit / s.shotsFired) * 100) : 0
+  const acc = s.shotsFired ? Math.min(100, Math.round((s.shotsHit / s.shotsFired) * 100)) : 0
   const ground = s.groundTotal ? Math.round((s.groundKills / s.groundTotal) * 100) : 100
   const rows: [string, string][] = [
     ['Enemies destroyed', `${s.kills}`],

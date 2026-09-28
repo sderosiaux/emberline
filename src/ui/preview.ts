@@ -40,7 +40,7 @@ export class WeaponPreview {
     const w = new World(l, DIFFICULTIES.gunship, true)
     w.god = true
     w.scroll = 40
-    w.player.y = PH - 120
+    w.player.y = PH - 90
     w.player.special = 100
     const p = w.player
     this.sweep = 0
@@ -51,10 +51,10 @@ export class WeaponPreview {
       return { mx: Math.max(-1, Math.min(1, (tx - pl.x) / 40)), my: 0, fire: true, special: false }
     }
     for (let i = 0; i < 5; i++) {
-      const e = w.spawn('dummy', 120 + i * 80, 330 + (i % 2) * 60)
+      const e = w.spawn('dummy', PW / 2 - 160 + i * 80, 310 + (i % 2) * 40)
       e.s.bx = e.x
     }
-    for (let i = 0; i < 3; i++) w.spawn('dummy_ground', 150 + i * 130, 200 + i * 230, { mover: new GroundMover() })
+    for (let i = 0; i < 3; i++) w.spawn('dummy_ground', PW / 2 - 130 + i * 130, 120 + i * 190, { mover: new GroundMover() })
     // a few bullets for defensive items to chew on
     this.w = w
     this.t = 0
@@ -66,7 +66,7 @@ export class WeaponPreview {
     this.t += dt
     w.update(Math.min(dt, 1 / 30))
     if (Math.floor(this.t * 2) !== Math.floor((this.t - dt) * 2)) {
-      for (let i = 0; i < 3; i++) w.fire(PW / 2 + (Math.random() - 0.5) * 300, 280, Math.PI / 2 + (Math.random() - 0.5) * 0.5, 150)
+      for (let i = 0; i < 3; i++) w.fire(PW / 2 + (Math.random() - 0.5) * 300, 200, Math.PI / 2 + (Math.random() - 0.5) * 0.5, 150)
     }
   }
 
@@ -78,7 +78,7 @@ export class WeaponPreview {
     const s = this.canvas.width / viewW
     const viewH = this.canvas.height / s
     const cx = PW / 2
-    const bottom = PH - 60
+    const bottom = PH - 30
     c.setTransform(1, 0, 0, 1, 0, 0)
     c.fillStyle = '#23232d'
     c.fillRect(0, 0, this.canvas.width, this.canvas.height)

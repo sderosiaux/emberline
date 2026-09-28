@@ -48,8 +48,8 @@ registerEnemy({
   id: 'm4_rift_rock', hp: 120, r: 16, sprite: 'm4_rift_rock', layer: 'air', score: 1500, credits: 40, charge: 6, explode: 'small', contact: 0, noShadow: true,
   init(e) { e.noCull = true; e.s.ignoreGate = 1; e.s.y0 = e.y },
   update(e, w, dt) {
-    e.x += 330 * dt
-    e.y = e.s.y0 + Math.sin(e.age * 3) * 14
+    e.x += 430 * dt
+    e.y = e.s.y0 + Math.sin(e.age * 3.5) * 14
     e.rot += dt * 5
     if (Math.random() < 0.7) w.parts.spawn(P.Glow, e.x - 10, e.y + rand(-5, 5), -60, 0, 0.4, 6, 1, C.violet)
     if (e.x > PW + 60) e.gone = true
@@ -114,7 +114,7 @@ const curtain = (gapX: number, vy: number) => (w: World) => {
 const rocks = (n: number, vy = 80) => (w: World) => {
   for (let i = 0; i < n; i++) {
     const id = Math.random() < 0.3 ? 'rock_l' : Math.random() < 0.6 ? 'rock_m' : 'rock_s'
-    w.after(i * 0.35, () => w.spawn(id, rand(30, PW - 30), -40, { mover: new LineMover(rand(-25, 25), vy + rand(-20, 30)) }))
+    w.after(i * 0.35, () => w.spawn(id, rand(30, PW - 30), -40, { mover: new LineMover(rand(-30, 30), vy + rand(-20, 30)) }))
   }
 }
 
@@ -129,108 +129,113 @@ export const m4: MissionDef = {
     'Mind the drill lasers. They were built for rock and they are not picky.',
   ],
   script(L) {
+    const X = (f: number) => PW * f
+    const row = (sprite: string, y: number, x0 = 70, x1 = PW + 70) => { for (let x = x0; x < x1; x += 140) L.decor(sprite, x, { y }) }
     // ── the belt: learn the rocks ──
     L.at(0).radio('HALLORAN', 'You are in the Shoals. Every rock out here is either ore or cover. The Choir uses both.')
-      .decor('prop_rock_bg', 120, { y: -260, depth: 0.5 }).decor('prop_rock_bg', 460, { y: -520, depth: 0.5, rot: 2 })
-    L.at(2).do(rocks(6, 70))
-    L.at(4.5).wave('dart', 6, 0.12, F.vee(PW / 2, 160))
-    L.at(7).wave('ore_rock', 1, 0, F.drift(PW / 2, 0, 60)).do((w) => {
-      w.spawn('rock_l', PW / 2 - 110, -60, { mover: new LineMover(8, 60) })
-      w.spawn('rock_l', PW / 2 + 110, -80, { mover: new LineMover(-8, 60) })
+      .decor('prop_rock_bg', X(0.14), { y: -260, depth: 0.5 }).decor('prop_rock_bg', X(0.82), { y: -520, depth: 0.5, rot: 2 }).decor('prop_rock_bg', X(0.46), { y: -780, depth: 0.5, rot: 4 })
+    L.at(1.5).do(rocks(9, 75))
+    L.at(3).wave('dart', 9, 0.1, F.vee(X(0.5), 170))
+    L.at(5).wave('ore_rock', 1, 0, F.drift(X(0.5), 0, 60)).do((w) => {
+      w.spawn('rock_l', X(0.5) - 150, -60, { mover: new LineMover(10, 60) })
+      w.spawn('rock_l', X(0.5) + 150, -80, { mover: new LineMover(-10, 60) })
     })
-    L.at(8).radio('KESTREL', 'Green veins. I know what those are worth.')
-    L.at(10).wave('dart', 6, 0.25, F.swoop(-1, 0.4)).wave('dart', 6, 0.25, F.swoop(1, 0.45))
-    L.at(13).wave('wasp', 4, 0.3, F.hover(150, 5)).do(rocks(4, 90))
+    L.at(6).radio('KESTREL', 'Green veins. I know what those are worth.')
+    L.at(7.5).wave('dart', 8, 0.2, F.swoop(-1, 0.4, 300)).wave('dart', 8, 0.2, F.swoop(1, 0.45, 300))
+    L.at(10).wave('wasp', 6, 0.22, F.hover(128, 4.5)).do(rocks(6, 90))
     // first mining platform
-    L.at(15).decor('prop_mining_rig', 140, { y: -160 }).decor('prop_conveyor', 330, { y: -110 }).decor('prop_conveyor', 470, { y: -110 })
-      .ground('turret', 110, { y: -120 }).ground('turret', 175, { y: -200 }).ground('cache', 420, { y: -110 })
-    L.at(18).wave('weaver', 4, 0.5, F.sine(PW * 0.72, 70, 2.2, 110)).wave('ore_rock', 1, 0, F.drift(80, 10, 70))
-    L.at(21).gate()
+    L.at(12).decor('prop_mining_rig', X(0.2), { y: -160 })
+    row('prop_conveyor', -110, X(0.45))
+    L.at(12).ground('turret', X(0.16), { y: -120 }).ground('turret', X(0.27), { y: -200 }).ground('cache', X(0.72), { y: -110 }).ground('turret', X(0.86), { y: -150 })
+    L.at(14).wave('weaver', 5, 0.4, F.sine(X(0.72), 90, 2.2, 120)).wave('weaver', 5, 0.4, F.sine(X(0.3), 90, 2.2, 120)).wave('ore_rock', 1, 0, F.drift(X(0.12), 10, 70))
+    L.at(17).gate(12)
 
     // ── drill rigs: thread the beams ──
-    L.at(23).scroll(35, 3).radio('HALLORAN', 'Drill rigs ahead. They cut rock with lasers. They will cut you with the same lasers.')
-    L.at(24).do(rig(150)).do(rig(410))
-    L.at(25).radio('KESTREL', 'Beams move together. Stay in the gap, kill the rig.')
-    L.at(27).wave('dart', 5, 0.2, F.column(PW / 2, 170))
-    L.at(30).wave('weaver', 3, 0.5, F.sine(PW / 2, 60, 2, 100))
-    L.at(33).decor('prop_mining_rig', 440, { y: -170 }).ground('turret', 470, { y: -120 }).ground('flak', 400, { y: -190 })
-    L.at(35).do(rig(90)).do(rig(280)).do(rig(470))
-    L.at(37).wave('lancer', 3, 0.5, F.spreadSelf(140, PW - 140))
-    L.at(40).wave('ore_rock', 2, 1.2, F.drift(PW / 2, 0, 65))
-    L.at(42).wave('wasp', 3, 0.3, F.hover(130, 4, 120, PW - 120))
-    L.at(45).gate()
-    L.at(46).scroll(70, 3)
+    L.at(18).scroll(35, 3).radio('HALLORAN', 'Drill rigs ahead. They cut rock with lasers. They will cut you with the same lasers.')
+    L.at(19).do(rig(X(0.27))).do(rig(X(0.73)))
+    L.at(20).radio('KESTREL', 'Beams move together. Stay in the gap, kill the rig.')
+    L.at(21.5).wave('dart', 7, 0.18, F.column(X(0.5), 180))
+    L.at(24).wave('weaver', 4, 0.4, F.sine(X(0.5), 80, 2, 110))
+    L.at(26).decor('prop_mining_rig', X(0.79), { y: -170 }).ground('turret', X(0.84), { y: -120 }).ground('flak', X(0.71), { y: -190 }).ground('turret', X(0.14), { y: -150 })
+    L.at(27.5).do(rig(X(0.12))).do(rig(X(0.37))).do(rig(X(0.63))).do(rig(X(0.88)))
+    L.at(29).wave('lancer', 5, 0.35, F.spreadSelf(X(0.15), X(0.85)))
+    L.at(32).wave('ore_rock', 3, 1, F.drift(X(0.5), 0, 65))
+    L.at(33.5).wave('wasp', 5, 0.25, F.hover(110, 4, X(0.15), X(0.85)))
+    L.at(36).gate(14)
+    L.at(37).scroll(70, 3)
 
     // ── the ghost (secret) ──
-    L.at(47).wave('missileer', 2, 0.8, F.hover(140, 6, 150, PW - 150)).do(rocks(5, 60))
-    L.at(51).radio('HALLORAN', 'Sensor ghost on the belt, bearing zero-nine-zero. Ignore it.')
-    L.at(52).do((w) => {
-      w.spawn('rock_l', 170, -70, { mover: new LineMover(0, 55) })
-      w.spawn('rock_l', 380, -110, { mover: new LineMover(0, 55) })
+    L.at(38).wave('missileer', 3, 0.5, F.hover(120, 6, X(0.2), X(0.8))).do(rocks(7, 65))
+    L.at(41).radio('HALLORAN', 'Sensor ghost on the belt, bearing zero-nine-zero. Ignore it.')
+    L.at(42).do((w) => {
+      w.spawn('rock_l', X(0.3), -70, { mover: new LineMover(0, 55) })
+      w.spawn('rock_l', X(0.68), -110, { mover: new LineMover(0, 55) })
     })
-    L.at(54).wave('dart', 6, 0.18, F.swoop(1, 0.5))
-    L.at(55.5).do((w) => { w.spawn('m4_rift_rock', -40, 72) })
-    L.at(58).wave('weaver', 4, 0.4, F.cross([[-30, 120], [PW * 0.5, 240], [PW + 40, 380]], 200))
-    L.at(61).gate()
+    L.at(43.5).wave('dart', 8, 0.16, F.swoop(1, 0.5, 300))
+    L.at(45).do((w) => { w.spawn('m4_rift_rock', -40, 62) })
+    L.at(47).wave('weaver', 6, 0.3, F.cross([[-30, 100], [PW * 0.5, 205], [PW + 40, 320]], 260))
+    L.at(50).gate(12)
 
     // ── minefield + seekers ──
-    L.at(63).radio('KESTREL', 'Minefield. They laid it across the ore lanes.')
+    L.at(51.5).radio('KESTREL', 'Minefield. They laid it across the ore lanes.')
     for (let row = 0; row < 4; row++) {
-      L.at(64 + row * 2.2).do((w) => {
+      L.at(52.5 + row * 1.9).do((w) => {
         const gap = row % 2 ? PW * 0.3 : PW * 0.7
-        for (let x = 40; x < PW; x += 70) if (Math.abs(x - gap) > 60) w.spawn('mine', x + rand(-10, 10), -30, { mover: new LineMover(0, 75) })
+        for (let x = 40; x < PW; x += 82) if (Math.abs(x - gap) > 60) w.spawn('mine', x + rand(-10, 10), -30, { mover: new LineMover(0, 85) })
       })
     }
-    L.at(66).wave('seeker', 5, 0.3, F.seek(PW * 0.2))
-    L.at(69).wave('seeker', 5, 0.3, F.seek(PW * 0.8))
-    L.at(71).wave('seeker', 6, 0.12, F.sweep(-1, 90, 220, 40)).wave('seeker', 6, 0.12, F.sweep(1, 130, 220, 40))
-    L.at(73).ground('repair_cache', 280)
-    L.at(75).gate()
+    L.at(54).wave('seeker', 6, 0.25, F.seek(X(0.2)))
+    L.at(56.5).wave('seeker', 6, 0.25, F.seek(X(0.8)))
+    L.at(58.5).wave('seeker', 7, 0.1, F.sweep(-1, 77, 290, 40)).wave('seeker', 7, 0.1, F.sweep(1, 110, 290, 40))
+    L.at(60).ground('repair_cache', X(0.5))
+    L.at(62).gate(12)
 
     // ── carrier group ──
-    L.at(77).radio('HALLORAN', 'Choir carrier with escorts. Wardens first, or you are shooting a wall.')
-    L.at(78).do((w) => {
-      w.spawn('carrier', PW / 2, -90, { mover: new LineMover(0, 26) })
-      for (const [x, delay] of [[PW * 0.27, 1.2], [PW * 0.73, 1.6]] as const) {
-        w.after(delay, () => w.spawn('warden', x, -40, { mover: new HoverMover(x, 150, 1.8, 16, 0, -100) }))
+    L.at(63.5).radio('HALLORAN', 'Choir carrier with escorts. Wardens first, or you are shooting a wall.')
+    L.at(64.5).do((w) => {
+      w.spawn('carrier', X(0.5), -90, { mover: new LineMover(0, 26) })
+      for (const [x, delay] of [[X(0.25), 1.2], [X(0.75), 1.6]] as const) {
+        w.after(delay, () => w.spawn('warden', x, -40, { mover: new HoverMover(x, 128, 1.8, 16, 0, -100) }))
       }
     })
-    L.at(81).radio('CHOIR', 'THE STONE REMEMBERS THE HAMMER. SO WILL YOU.', 'enemy')
-    L.at(84).wave('missileer', 2, 0.6, F.hover(230, 8, 90, PW - 90))
-    L.at(88).wave('dart', 8, 0.25, F.loop(-1, 240))
-    L.at(92).do(rocks(5, 70))
-    L.at(95).gate(30)
+    L.at(66).radio('CHOIR', 'THE STONE REMEMBERS THE HAMMER. SO WILL YOU.', 'enemy')
+    L.at(67.5).wave('missileer', 3, 0.5, F.hover(195, 8, X(0.12), X(0.88)))
+    L.at(70).wave('dart', 10, 0.2, F.loop(-1, 200, 150, 300)).wave('dart', 10, 0.2, F.loop(1, 200, 150, 300))
+    L.at(73).do(rocks(7, 75))
+    L.at(75).gate(14)
 
     // ── escalation: rigs in a rock storm ──
-    L.at(97).decor('prop_mining_rig', 150, { y: -170 }).decor('prop_mining_rig', 420, { y: -240 })
-      .ground('artillery', 130, { y: -140 }).ground('turret', 440, { y: -200 })
-    L.at(98).intensity(3).scroll(40, 3).do(rig(120)).do(rig(440))
-    L.at(99).do(rocks(8, 100))
-    L.at(101).wave('lancer', 4, 0.5, F.spreadSelf(100, PW - 100))
-    L.at(104).wave('sniper', 2, 1, F.hover(110, 6, 120, PW - 120))
-    L.at(106).do(rig(280)).wave('ore_rock', 1, 0, F.drift(200, 10, 70))
-    L.at(108).wave('splitter', 2, 1, F.hover(170, 6, 170, PW - 170))
-    L.at(112).wave('wasp', 5, 0.25, F.swoop(-1, 0.5))
-    L.at(115).gate()
-    L.at(116).scroll(70, 3)
+    L.at(76).decor('prop_mining_rig', X(0.25), { y: -170 }).decor('prop_mining_rig', X(0.75), { y: -240 })
+      .ground('artillery', X(0.22), { y: -140 }).ground('turret', X(0.79), { y: -200 }).ground('artillery', X(0.6), { y: -110 })
+    L.at(77).intensity(3).scroll(40, 3).do(rig(X(0.15))).do(rig(X(0.5))).do(rig(X(0.85)))
+    L.at(78).do(rocks(11, 105))
+    L.at(79.5).wave('lancer', 6, 0.3, F.spreadSelf(X(0.12), X(0.88)))
+    L.at(82).wave('sniper', 3, 0.7, F.hover(95, 6, X(0.2), X(0.8)))
+    L.at(83.5).do(rig(X(0.33))).do(rig(X(0.67))).wave('ore_rock', 1, 0, F.drift(X(0.36), 10, 70))
+    L.at(85).wave('splitter', 3, 0.6, F.hover(145, 6, X(0.2), X(0.8)))
+    L.at(88).wave('wasp', 7, 0.18, F.swoop(-1, 0.5, 300)).wave('wasp', 7, 0.18, F.swoop(1, 0.45, 300))
+    L.at(90).gate(14)
+    L.at(91).scroll(70, 3)
 
     // ── the narrows: rock curtains, one gap each ──
-    L.at(117).intensity(2).radio('HALLORAN', 'Belt narrows here. Rock walls. Find the gaps or make them.')
-    L.at(118).do(curtain(PW * 0.3, 85))
-    L.at(122).do(curtain(PW * 0.72, 85)).wave('seeker', 4, 0.3, F.seek(PW / 2))
-    L.at(126).do(curtain(PW * 0.5, 85)).wave('weaver', 3, 0.5, F.sine(PW * 0.2, 50, 2, 110))
-    L.at(130).wave('ore_rock', 3, 0.6, F.drift(PW / 2, 0, 70))
-    L.at(131).decor('prop_mining_rig', 280, { y: -170 }).decor('prop_conveyor', 90, { y: -120 }).decor('prop_conveyor', 470, { y: -120 })
-      .ground('fuel', 240, { y: -130 }).ground('fuel', 320, { y: -130 }).ground('turret', 280, { y: -200 }).ground('flak', 280, { y: -90 })
-    L.at(134).wave('gunship', 1, 0, F.hoverAt(PW / 2, 150, 9)).wave('dart', 8, 0.3, F.loop(1, 230))
-    L.at(140).gate(24)
+    L.at(92).intensity(2).radio('HALLORAN', 'Belt narrows here. Rock walls. Find the gaps or make them.')
+    L.at(93).do(curtain(X(0.3), 95))
+    L.at(96.5).do(curtain(X(0.72), 95)).wave('seeker', 5, 0.25, F.seek(X(0.5)))
+    L.at(100).do(curtain(X(0.5), 95)).wave('weaver', 4, 0.4, F.sine(X(0.18), 60, 2, 120)).wave('weaver', 4, 0.4, F.sine(X(0.82), 60, 2, 120))
+    L.at(103).wave('ore_rock', 3, 0.6, F.drift(X(0.5), 0, 70))
+    L.at(104).decor('prop_mining_rig', X(0.5), { y: -170 })
+    row('prop_conveyor', -120)
+    L.at(104).ground('fuel', X(0.43), { y: -130 }).ground('fuel', X(0.57), { y: -130 }).ground('turret', X(0.5), { y: -200 }).ground('flak', X(0.5), { y: -90 })
+      .ground('flak', X(0.14), { y: -150 }).ground('turret', X(0.86), { y: -150 })
+    L.at(106).wave('gunship', 1, 0, F.hoverAt(X(0.5), 128, 9)).wave('dart', 10, 0.25, F.loop(1, 200, 150, 300)).wave('dart', 10, 0.25, F.loop(-1, 200, 150, 300))
+    L.at(110).gate(14)
 
     // ── boss ──
-    L.at(142).intensity(1).scroll(20, 4).radio('HALLORAN', 'Big mass on scope. It is eating the belt as it comes.')
-    L.at(145).radio('KESTREL', 'That is not a rig. That is the thing rigs are made for.')
-    L.at(147).do((w) => spawnExcavator(w))
-    L.at(148).until('boss_dead')
-    L.at(149).radio('HALLORAN', 'Belt is quiet. The ore stops here. Come home, Kestrel.')
-    L.at(151).do(() => {})
+    L.at(111).intensity(1).scroll(20, 4).radio('HALLORAN', 'Big mass on scope. It is eating the belt as it comes.')
+    L.at(113.5).radio('KESTREL', 'That is not a rig. That is the thing rigs are made for.')
+    L.at(115).do((w) => spawnExcavator(w))
+    L.at(116).until('boss_dead')
+    L.at(117).radio('HALLORAN', 'Belt is quiet. The ore stops here. Come home, Kestrel.')
+    L.at(119).do(() => {})
   },
 }

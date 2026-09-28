@@ -73,6 +73,7 @@ Debug mode also exposes `window.__emb` for automated playtesting: `start(mission
 pnpm test         # shop, economy, save/load, combat rules, every weapon level, every mission simulated to completion
 pnpm typecheck
 BALANCE=1 npx vitest run tests/balance.sim.test.ts   # whole-campaign simulation with a greedy shopper
+BOSS=m6 npx vitest run tests/boss.sim.test.ts        # boss time-to-kill for one mission, three builds
 ```
 
 The balance simulation flies the full campaign three times, once per build style (pulse, spread, heavy), with the autopilot and no god mode, and prints what each run earned and bought along the way. The economy was tuned against those numbers rather than hand estimates.

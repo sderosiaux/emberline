@@ -3,11 +3,10 @@ import { DIFFICULTIES, type Loadout } from '../game/campaign'
 import { createBackground, type Background, type BiomeId } from '../render/backgrounds'
 import { drawWorld } from '../render/renderer'
 import { autopilot } from '../game/autopilot'
-import { FIELD_X, PW, PH, SCREEN_H } from '../game/consts'
+import { PW } from '../game/consts'
 import { F } from '../game/level'
 import { GroundMover } from '../game/movers'
 import { pick, rand } from '../core/math'
-import { T } from './theme'
 
 const SHOWCASE: Loadout[] = [
   { front: { id: 'pulse', level: 6 }, rear: { id: 'flank', level: 3 }, podL: { id: 'wasp', level: 2 }, podR: { id: 'wasp', level: 2 }, reactor: 'r3', shield: 's2', hull: 'h3', special: 'nova' },
@@ -61,20 +60,9 @@ export class Attract {
 
   draw(c: CanvasRenderingContext2D) {
     c.save()
-    c.translate(FIELD_X, 0)
-    c.beginPath(); c.rect(0, 0, PW, PH); c.clip()
     this.bg.drawBase(c)
     drawWorld(c, this.w, this.bg)
     c.restore()
   }
 }
 
-/** Ink + ember rules framing the playfield on the paper layer. */
-export function drawFieldFrame(c: CanvasRenderingContext2D) {
-  c.fillStyle = T.ink
-  c.fillRect(FIELD_X - 6, 0, 6, SCREEN_H)
-  c.fillRect(FIELD_X + PW, 0, 6, SCREEN_H)
-  c.fillStyle = T.ember
-  c.fillRect(FIELD_X - 10, 0, 2, SCREEN_H)
-  c.fillRect(FIELD_X + PW + 8, 0, 2, SCREEN_H)
-}

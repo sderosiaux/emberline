@@ -273,7 +273,11 @@ export class World {
     const def = e.def
     const ground = e.layer === 'ground'
     explode(this, e.x, e.y, e.elite && def.explode === 'small' ? 'medium' : def.explode, ground, ground ? C.orange : C.yellow)
-    if (def.explode === 'large' || def.explode === 'huge') this.hitstop = Math.max(this.hitstop, 0.045)
+    if (def.explode === 'large' || def.explode === 'huge') {
+      this.hitstop = Math.max(this.hitstop, 0.045)
+      // arcade bullet-cancel: a big kill wipes nearby fire and pays it out as scrap
+      if (!this.preview) this.clearBullets(e.x, e.y, 150 + e.r, true)
+    } else if (def.explode === 'medium') this.hitstop = Math.max(this.hitstop, 0.012)
     def.onDeath?.(e, this)
     e.onDeath?.(this, e)
     if (!rewards || this.preview) return
@@ -281,8 +285,15 @@ export class World {
     if (def.target) this.stats.groundKills++
     this.chain++
     this.chainTimer = 2.2
+    if (this.chainMult() > (this.chain > 1 ? 1 + Math.min(4, Math.floor((this.chain - 1) / 12) * 0.5) : 1)) {
+      this.floater(this.player.x, this.player.y - 34, `CHAIN ×${this.chainMult().toFixed(1)}`, '#ff9a3d')
+      audio.sfx('ui_upgrade', { vol: 0.35, pitch: 0.8 + this.chainMult() * 0.15 })
+    }
     this.stats.maxChain = Math.max(this.stats.maxChain, this.chain)
-    this.score += Math.round(def.score * this.chainMult() * (e.elite ? 3 : 1))
+    const multBefore = this.chainMult()
+    const pts = Math.round(def.score * multBefore * (e.elite ? 3 : 1))
+    this.score += pts
+    if (pts >= 300) this.floater(e.x, e.y - 10, pts.toLocaleString('en-US'), e.elite ? '#ffcc33' : '#ffffff')
     const credits = Math.round(def.credits * this.diff.creditMul * (e.elite ? 3 : 1) * this.creditScale)
     this.dropCredits(e.x, e.y, credits)
     this.player.onKill(def.charge * (e.elite ? 1.5 : 1))

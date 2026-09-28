@@ -41,7 +41,7 @@ class DeckMover {
 /** A line of trawlers crossing the sea at roughly constant screen height y. */
 function trawlers(w: World, fromLeft: boolean, y: number, speed: number, n = 3) {
   for (let i = 0; i < n; i++) {
-    const x = fromLeft ? -30 - i * 62 : PW + 30 + i * 62
+    const x = fromLeft ? -30 - i * 70 : PW + 30 + i * 70
     w.spawn('trawler', x, y - i * 10, { mover: new BoatMover(fromLeft ? speed : -speed, -w.scroll), tag: 'civ' }).noCull = true
   }
 }
@@ -51,7 +51,7 @@ function trawlerLane(w: World, x: number, n = 3) {
   for (let i = 0; i < n; i++) w.spawn('trawler', x + (i % 2) * 14, -30 - i * 70, { mover: new BoatMover(0, 28), tag: 'civ' })
 }
 
-const DECK_X = 300
+const DECK_X = PW / 2
 /** The abandoned fleet carrier: Choir guns and hangars bolted to her flight deck. */
 function carrierDeck(w: World) {
   const deck: Decor = { sprite: 'prop_carrier_deck', x: DECK_X, y: -400, rot: 0, scale: 1, depth: 1, vx: 0, alpha: 1, above: false }
@@ -74,7 +74,7 @@ function carrierDeck(w: World) {
 /** Storm lightning: every strike lights the sea and strips the phantoms' cloak for a moment. */
 function lightning(w: World) {
   if (w.flags.has('m2_calm') || w.flags.has('boss_dead')) return
-  const x = rand(40, PW - 40), y = rand(160, 520)
+  const x = rand(40, PW - 40), y = rand(140, PH - 110)
   const pts: number[] = []
   let px = x + rand(-80, 80)
   for (let i = 0; i <= 9; i++) {
@@ -111,97 +111,106 @@ export const m2: MissionDef = {
     'Take the platforms back. Mind the water.',
   ],
   script(L) {
+    const X = (f: number) => PW * f
     L.at(0).radio('HALLORAN', 'Glasswater, Kestrel. Clear water, clear skies. Enjoy it while it lasts.')
-      .decor('prop_island_l', 110, { y: -260 }).decor('prop_reef', 440, { y: -120 })
+      .decor('prop_island_l', X(0.17), { y: -260 }).decor('prop_reef', X(0.8), { y: -120 }).decor('prop_reef', X(0.4), { y: -430 })
     // ── bright shallows: gunboats and darts over the reefs ──
-    L.at(2.5).wave('dart', 5, 0.1, F.vee(PW / 2, 150)).ground('gunboat', 150, { vy: -20 }).ground('gunboat', 410, { vy: -20 })
-    L.at(5).wave('dart', 6, 0.25, F.swoop(-1, 0.4))
-    L.at(7).wave('dart', 6, 0.25, F.swoop(1, 0.42)).decor('prop_buoy', 60, { y: -40 }).decor('prop_buoy', 500, { y: -40 })
-    L.at(9).wave('wasp', 3, 0.35, F.hover(150, 5)).ground('gunboat', -30, { vx: 50, y: 120 })
-    L.at(11).decor('prop_oil_rig', 400, { y: -170 })
-      .ground('turret', 360, { y: -120 }).ground('turret', 440, { y: -220 }).ground('flak', 400, { y: -170 })
-    L.at(12).radio('KESTREL', 'Water this clear, I can count the fish. And the things that are not fish.')
-      .decor('prop_island_s', 120, { y: -100 }).ground('cache', 120, { y: -100 })
-    L.at(14).wave('weaver', 4, 0.5, F.sine(PW * 0.3, 80, 2.2, 110))
-    L.at(16).gate()
+    L.at(1.5).wave('dart', 7, 0.08, F.vee(X(0.5), 170)).ground('gunboat', X(0.2), { vy: -20 }).ground('gunboat', X(0.8), { vy: -20 })
+    L.at(3.5).wave('dart', 8, 0.2, F.swoop(-1, 0.45, 290))
+    L.at(5).wave('dart', 8, 0.2, F.swoop(1, 0.47, 290)).decor('prop_buoy', X(0.07), { y: -40 }).decor('prop_buoy', X(0.93), { y: -40 })
+    L.at(6.5).wave('wasp', 5, 0.25, F.hover(125, 4.5)).ground('gunboat', -30, { vx: 65, y: 100 }).ground('gunboat', PW + 30, { vx: -65, y: 150 })
+    L.at(8.5).decor('prop_oil_rig', X(0.72), { y: -170 })
+      .ground('turret', X(0.65), { y: -120 }).ground('turret', X(0.79), { y: -220 }).ground('flak', X(0.72), { y: -170 })
+    L.at(9.5).radio('KESTREL', 'Water this clear, I can count the fish. And the things that are not fish.')
+      .decor('prop_island_s', X(0.2), { y: -100 }).ground('cache', X(0.2), { y: -100 })
+    L.at(10.5).wave('weaver', 5, 0.4, F.sine(X(0.28), 110, 2.3, 130)).wave('weaver', 5, 0.4, F.sine(X(0.5), 90, 2.3, 130))
+    L.at(13).gate(10)
     // trawler group 1: first contact with the civilians
-    L.at(17).do((w) => trawlers(w, true, 540, 75))
+    L.at(14).do((w) => trawlers(w, true, PH * 0.75, 98))
       .radio('HALLORAN', 'Civilian transponders. Fishing fleet never got the recall.')
-    L.at(21).wave('dart', 8, 0.18, F.column(PW * 0.7, 190, 0)).wave('dart', 4, 0.2, F.vee(PW * 0.3, 150))
+    L.at(17).wave('dart', 10, 0.14, F.column(X(0.72), 220, 0)).wave('dart', 7, 0.1, F.vee(X(0.28), 170))
     // ── submarines: teach the surfacing window ──
-    L.at(23).radio('HALLORAN', 'Sonar contacts. Subs only break the surface to shoot. That is your window.')
-      .ground('sub', 170, { y: -60 }).ground('sub', 390, { y: -140 })
-    L.at(27).ground('sub', 280, { y: -60 }).wave('dart', 5, 0.22, F.swoop(-1, 0.35)).decor('prop_reef', 120, { y: -140 })
-    L.at(30).ground('gunboat', PW + 30, { vx: -55, y: 140 }).ground('gunboat', PW + 90, { vx: -55, y: 150 })
-    L.at(32).wave('wasp', 4, 0.3, F.hover(170, 5))
-    L.at(35).gate()
+    L.at(19).radio('HALLORAN', 'Sonar contacts. Subs only break the surface to shoot. That is your window.')
+      .ground('sub', X(0.3), { y: -60 }).ground('sub', X(0.7), { y: -140 })
+    L.at(22).ground('sub', X(0.5), { y: -60 }).ground('sub', X(0.12), { y: -130 }).wave('dart', 7, 0.18, F.swoop(-1, 0.4, 290)).decor('prop_reef', X(0.22), { y: -140 })
+    L.at(24.5).ground('gunboat', PW + 30, { vx: -72, y: 120 }).ground('gunboat', PW + 90, { vx: -72, y: 130 }).ground('gunboat', -30, { vx: 72, y: 180 })
+    L.at(26).wave('wasp', 6, 0.2, F.hover(145, 4.5))
+    L.at(28.5).gate(12)
     // minefield between the buoys
-    L.at(36).decor('prop_buoy', 90, { y: -40 }).decor('prop_buoy', 470, { y: -40 })
-      .wave('mine', 7, 0.45, (i) => ({ x: 80 + ((i * 3) % 7) * 67, y: -30, mover: null }), { onSpawn: (e) => { e.mover = new HoverMover(e.x, 160 + (e.x % 3) * 60, 3, 8, 0, 60) } })
-    L.at(38).wave('lancer', 3, 0.5, F.spreadSelf(120, PW - 120))
-    L.at(41).decor('prop_island_l', 430, { y: -260 }).ground('destroyer', 140, { y: -110, vy: -15 })
+    L.at(29.5).decor('prop_buoy', X(0.12), { y: -40 }).decor('prop_buoy', X(0.88), { y: -40 })
+      .wave('mine', 10, 0.32, (i) => {
+        const x = X(0.1) + ((i * 3) % 10) * X(0.8 / 9)
+        return { x, y: -30, mover: new HoverMover(x, 130 + (i % 3) * 50, 3, 8, 0, 60) }
+      })
+    L.at(31).wave('lancer', 4, 0.35, F.spreadSelf(X(0.15), X(0.85)))
+    L.at(33.5).decor('prop_island_l', X(0.78), { y: -260 }).ground('destroyer', X(0.25), { y: -110, vy: -15 })
       .radio('KESTREL', 'Destroyer. Big guns, slow brain.')
-    L.at(43).ground('sub', 420, { y: -60 }).wave('bomber', 1, 0, F.column(PW * 0.65, 55))
-    L.at(46).wave('dart', 6, 0.2, F.swoop(1, 0.35))
-    L.at(49).gate(20)
+    L.at(35).ground('sub', X(0.75), { y: -60 }).wave('bomber', 1, 0, F.column(X(0.62), 60)).wave('wasp', 5, 0.2, F.swoop(1, 0.35, 290))
+    L.at(37.5).wave('dart', 8, 0.16, F.swoop(1, 0.4, 290)).wave('dart', 8, 0.16, F.swoop(-1, 0.33, 290))
+    L.at(40).gate(14)
 
     // ── the ship underneath ──
-    L.at(51).scroll(38, 3).intensity(1).radio('HALLORAN', 'Kestrel. Big return under you. Sonar makes it a hull. A very long hull.')
-    L.at(52).do(carrierDeck)
-    L.at(57).radio('KESTREL', 'That is a fleet carrier. One of ours. Was one of ours.')
-    L.at(60).radio('HALLORAN', 'They bolted guns to her deck. Strip them off her.')
-    L.at(62).intensity(3).do((w) => { w.spawn('carrier', PW * 0.35, -120, { mover: new HoverMover(PW * 0.35, 120, 3.5, 16, 0, -50) }) })
+    L.at(41).scroll(40, 3).intensity(1).radio('HALLORAN', 'Kestrel. Big return under you. Sonar makes it a hull. A very long hull.')
+    L.at(42).do(carrierDeck)
+    L.at(46).radio('KESTREL', 'That is a fleet carrier. One of ours. Was one of ours.')
+    L.at(48.5).radio('HALLORAN', 'They bolted guns to her deck. Strip them off her.')
+      .ground('gunboat', X(0.1), { vy: -26 }).ground('gunboat', X(0.9), { vy: -26 })
+    L.at(50).intensity(3).do((w) => { w.spawn('carrier', X(0.17), -120, { mover: new HoverMover(X(0.17), 100, 3.5, 13, 0, -90) }) })
       .radio('CHOIR', 'WE FOUND HER SLEEPING. WE TAUGHT HER TO SING.', 'enemy')
     // trawler group 2 threads past the deck's fuel bowsers
-    L.at(64).do((w) => trawlerLane(w, 62))
-    L.at(68).wave('wasp', 4, 0.3, F.swoop(-1, 0.3))
-    L.at(74).wave('missileer', 2, 0.6, F.hover(120, 7, 140, PW - 140))
-    L.at(80).wave('dart', 8, 0.2, F.loop(1, 200))
-    L.at(86).gate(24)
-    L.at(88).scroll(60, 4)
+    L.at(52).do((w) => trawlerLane(w, DECK_X - 200))
+    L.at(54).wave('wasp', 6, 0.22, F.swoop(-1, 0.3, 290))
+    L.at(56).ground('gunboat', PW + 30, { vx: -72, y: 90 }).ground('gunboat', PW + 90, { vx: -72, y: 100 })
+    L.at(58).wave('missileer', 3, 0.45, F.hover(100, 6.5, X(0.2), X(0.8)))
+    L.at(62).wave('dart', 10, 0.16, F.loop(1, 170, 120, 290))
+    L.at(64.5).wave('weaver', 5, 0.4, F.sine(X(0.88), 50, 2.2, 120))
+    L.at(68).gate(14)
+    L.at(69).scroll(60, 4)
 
     // ── storm: phantoms hunting in the rain ──
-    L.at(89).phase('storm').intensity(2).radio('HALLORAN', 'Storm front coming over the rigs. Visibility is going.')
-    L.at(91).do(lightning)
-    L.at(92).wave('phantom', 3, 0.6, F.hover(170, 7, 120, PW - 120))
+    L.at(70).phase('storm').intensity(2).radio('HALLORAN', 'Storm front coming over the rigs. Visibility is going.')
+    L.at(71.5).do(lightning)
+    L.at(72).wave('phantom', 4, 0.5, F.hover(145, 6.5, X(0.18), X(0.82)))
       .radio('KESTREL', 'Lost them in the rain. Something is pacing me.')
-    L.at(95).radio('HALLORAN', 'Phantoms. Wait for the lightning, then hit what it shows you.')
-    L.at(97).ground('gunboat', 120, { vy: -30 }).ground('gunboat', 440, { vy: -30 }).ground('sub', 280, { y: -60 })
-    L.at(99).wave('dart', 6, 0.2, F.swoop(1, 0.4))
+    L.at(74.5).radio('HALLORAN', 'Phantoms. Wait for the lightning, then hit what it shows you.')
+    L.at(76).ground('gunboat', X(0.2), { vy: -30 }).ground('gunboat', X(0.8), { vy: -30 }).ground('sub', X(0.5), { y: -60 })
+    L.at(78).wave('dart', 8, 0.16, F.swoop(1, 0.4, 290))
     // trawler group 3, caught out in the weather
-    L.at(102).do((w) => trawlers(w, false, 330, 85))
+    L.at(80).do((w) => trawlers(w, false, PH * 0.46, 110))
       .radio('MARISOL', '...Marisol to anyone... taking water... running for the lee of the rig...', 'odd')
-    L.at(103).wave('phantom', 4, 0.5, F.path([[-30, 120], [PW * 0.3, 240], [PW * 0.7, 160], [PW + 40, 280]], 120))
-    L.at(106).decor('prop_oil_rig', 150, { y: -170 }).ground('turret', 110, { y: -130 }).ground('flak', 190, { y: -210 })
-    L.at(108).wave('missileer', 2, 0.6, F.hover(120, 7, 160, PW - 160)).wave('lancer', 2, 0.6, F.spreadSelf(100, PW - 100))
-    L.at(113).ground('destroyer', 420, { y: -110, vy: -15 }).wave('phantom', 3, 0.5, F.hover(200, 6))
-    L.at(118).gate(22)
-    L.at(120).wave('sniper', 2, 0.5, F.hover(110, 7, 140, PW - 140)).wave('wasp', 4, 0.3, F.swoop(-1, 0.4))
-    L.at(124).wave('phantom', 5, 0.35, F.loop(-1, 230))
-    L.at(130).gate(20)
+    L.at(81).wave('phantom', 5, 0.45, F.path([[-30, 100], [X(0.3), 205], [X(0.7), 135], [PW + 40, 240]], 156))
+    L.at(83.5).decor('prop_oil_rig', X(0.25), { y: -170 }).ground('turret', X(0.18), { y: -130 }).ground('flak', X(0.32), { y: -210 })
+      .ground('turret', X(0.82), { y: -150 })
+    L.at(85).wave('missileer', 3, 0.45, F.hover(100, 6.5, X(0.22), X(0.78))).wave('lancer', 3, 0.5, F.spreadSelf(X(0.15), X(0.85)))
+    L.at(89).ground('destroyer', X(0.75), { y: -110, vy: -15 }).wave('phantom', 4, 0.4, F.hover(170, 5.5, X(0.15), X(0.6)))
+    L.at(93).gate(14)
+    L.at(94).wave('sniper', 3, 0.4, F.hover(95, 6.5, X(0.2), X(0.8))).wave('wasp', 6, 0.2, F.swoop(-1, 0.4, 290))
+    L.at(97.5).wave('phantom', 7, 0.3, F.loop(-1, 195, 110, 290))
+    L.at(101).gate(14)
 
     // ── the storm breaks: escalation to the boss ──
-    L.at(132).phase('calm').intensity(2).do((w) => w.flags.add('m2_calm'))
+    L.at(102).phase('calm').intensity(2).do((w) => w.flags.add('m2_calm'))
       .radio('KESTREL', 'Storm is breaking. I can see the rigs again.')
-    L.at(133).decor('prop_oil_rig', 280, { y: -180 })
-      .ground('turret', 230, { y: -130 }).ground('turret', 330, { y: -230 }).ground('flak', 280, { y: -180 }).ground('repair_cache', 470, { y: -60 })
-    L.at(136).do((w) => { for (let i = 0; i < 6; i++) w.spawn('gunboat', -30 - i * 40, 60 + i * 30, { mover: new BoatMover(70, -40) }).noCull = true })
-    L.at(139).intensity(3).wave('gunship', 1, 0, F.hoverAt(PW / 2, 150, 9)).wave('dart', 8, 0.3, F.loop(1, 220))
-    L.at(143).radio('HALLORAN', 'Gunship. Keep moving, let it waste its breath.')
-    L.at(145).ground('sub', 140, { y: -60 }).ground('sub', 420, { y: -60 }).decor('prop_island_s', 60, { y: -120 })
-    L.at(149).gate(22)
-    L.at(151).wave('bomber', 2, 1.2, F.column(PW * 0.3, 60)).wave('weaver', 6, 0.4, F.cross([[-30, 100], [PW * 0.5, 260], [PW + 40, 420]], 200))
-    L.at(156).wave('splitter', 2, 1, F.hover(160, 6, 170, PW - 170)).ground('gunboat', 280, { vy: -30 })
-    L.at(160).wave('wasp', 5, 0.25, F.hover(140, 5)).wave('dart', 6, 0.15, F.vee(PW / 2, 170))
-    L.at(164).gate()
+    L.at(103).decor('prop_oil_rig', X(0.5), { y: -180 })
+      .ground('turret', X(0.41), { y: -130 }).ground('turret', X(0.59), { y: -230 }).ground('flak', X(0.5), { y: -180 }).ground('repair_cache', X(0.85), { y: -60 })
+    L.at(105).do((w) => { for (let i = 0; i < 8; i++) w.spawn('gunboat', -30 - i * 40, 50 + i * 26, { mover: new BoatMover(90, -40) }).noCull = true })
+    L.at(107.5).intensity(3).wave('gunship', 1, 0, F.hoverAt(X(0.5), 128, 8))
+      .wave('dart', 10, 0.25, F.loop(1, 190, 120, 290)).wave('dart', 10, 0.25, F.loop(-1, 190, 120, 290))
+    L.at(110).radio('HALLORAN', 'Gunship. Keep moving, let it waste its breath.')
+    L.at(112).ground('sub', X(0.2), { y: -60 }).ground('sub', X(0.8), { y: -60 }).ground('sub', X(0.5), { y: -150 }).decor('prop_island_s', X(0.1), { y: -120 })
+    L.at(115).gate(14)
+    L.at(116).wave('bomber', 2, 1, F.column(X(0.3), 60)).wave('weaver', 8, 0.28, F.cross([[-30, 85], [PW * 0.5, 220], [PW + 40, 360]], 260))
+    L.at(120).wave('splitter', 3, 0.6, F.hover(135, 5, X(0.2), X(0.8))).ground('gunboat', X(0.5), { vy: -30 })
+    L.at(123.5).wave('wasp', 7, 0.2, F.hover(120, 4.5)).wave('dart', 8, 0.1, F.vee(X(0.5), 190))
+    L.at(127).gate(14)
 
     // ── TIDEBREAKER ──
-    L.at(166).scroll(14, 4).intensity(1).radio('HALLORAN', 'Sonar just lost the sea floor. No. Something is covering it.')
-    L.at(169).radio('CHOIR', 'SWIM, LITTLE EMBER. THE WATER REMEMBERS WHAT IT DROWNED.', 'enemy')
-    L.at(170).do((w) => spawnTidebreaker(w))
-    L.at(171).until('boss_dead')
-    L.at(173).radio('HALLORAN', 'It is going down. Glasswater is ours. What is left of it.')
-    L.at(176).do((w) => { if (!w.flags.has('civilian_hit')) trawlerThanks(w) })
-    L.at(184).do(() => {})
+    L.at(128).scroll(14, 4).intensity(1).radio('HALLORAN', 'Sonar just lost the sea floor. No. Something is covering it.')
+    L.at(131).radio('CHOIR', 'SWIM, LITTLE EMBER. THE WATER REMEMBERS WHAT IT DROWNED.', 'enemy')
+    L.at(132).do((w) => spawnTidebreaker(w))
+    L.at(133).until('boss_dead')
+    L.at(135).radio('HALLORAN', 'It is going down. Glasswater is ours. What is left of it.')
+    L.at(138).do((w) => { if (!w.flags.has('civilian_hit')) trawlerThanks(w) })
+    L.at(146).do(() => {})
   },
 }

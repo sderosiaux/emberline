@@ -43,6 +43,7 @@ export function shoot(w: World, x: number, y: number, ang: number, speed: number
   s.trail = o.trail ?? 0
   s.waveBaseX = x
   if (o.count !== false && !w.preview) w.stats.shotsFired++
+  else s.counted = true // uncounted shots (shrapnel, pods' extras) must not count as hits either
   return s
 }
 
@@ -332,11 +333,12 @@ class Rail extends Gun {
     const L = this.level
     const dmg = (L >= 8 ? 95 : L >= 5 ? 85 : L >= 2 ? 70 : 55) * pw
     const xs = L >= 7 ? [-12, 0, 12] : L >= 4 ? [-9, 9] : [0]
-    for (const dx of xs) this.rail(x + dx, y, dmg, L)
+    let any = false
+    for (const dx of xs) any = this.rail(x + dx, y, dmg, L) || any
     this.w.addShake(1.5)
-    if (!this.w.preview) this.w.stats.shotsFired++
+    if (!this.w.preview) { this.w.stats.shotsFired++; if (any) this.w.stats.shotsHit++ }
   }
-  private rail(x: number, y: number, dmg: number, L: number) {
+  private rail(x: number, y: number, dmg: number, L: number): boolean {
     const w = this.w
     let any = false
     for (const e of w.enemies) {
@@ -347,11 +349,11 @@ class Rail extends Gun {
         if (L >= 5) { w.splash(x, e.y, 34, 20, e); w.parts.spawn(P.Ring, x, e.y, 0, 0, 0.2, 4, 36, C.cyan) }
       }
     }
-    if (any && !w.preview) w.stats.shotsHit++
     w.line([x, y, x, -20], '#e8fbff', '#1f7fd6', 4.2, 0.2)
     w.parts.spawn(P.Flash, x, y, 0, 0, 0.1, 14, 22, C.cyan)
     for (let i = 0; i < 8; i++) w.parts.spawn(P.Spark, x, y - rand(0, PH), rand(-60, 60), rand(-30, 30), 0.2, 1.2, 0.5, C.cyan)
     if (L >= 8) this.scars.push({ x, t: 0.4, pw: dmg / 95 })
+    return any
   }
   update(dt: number, firing: boolean) {
     super.update(dt, firing)

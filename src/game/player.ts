@@ -14,7 +14,7 @@ export interface Blocker { x: number; y: number; r: number; onBlock(): void }
 
 export class Player {
   x = PW / 2
-  y = PH - 110
+  y = PH - 90
   vx = 0
   vy = 0
   bank = 0
@@ -39,7 +39,7 @@ export class Player {
   rear: RearGun | null
   pods: Pod[] = []
   blockers: Blocker[] = []
-  magnet = 78
+  magnet = 95
   bodyR = 14
   hitR = 4
   starving = 0
@@ -73,7 +73,7 @@ export class Player {
     this.special = 35
   }
 
-  get speed() { return 330 * this.stats.speedMul * (this.phased ? 1.35 : 1) }
+  get speed() { return 400 * this.stats.speedMul * (this.phased ? 1.35 : 1) }
 
   /** Spend energy; returns false if not enough (weapons then skip the shot). */
   useEnergy(n: number): boolean {
@@ -151,7 +151,7 @@ export class Player {
     }
     if (this.entering > 0) {
       this.entering -= dt
-      this.y = approach(this.y, PH - 110, 380 * dt)
+      this.y = approach(this.y, PH - 90, 420 * dt)
       mx = 0; my = 0; spec = false
     }
     const sp = this.speed * (prec ? 0.45 : 1)
@@ -160,8 +160,8 @@ export class Player {
     this.vx = approach(this.vx, tvx, acc * dt)
     this.vy = approach(this.vy, tvy, acc * dt)
     this.x = clamp(this.x + this.vx * dt, 18, PW - 18)
-    this.y = clamp(this.y + this.vy * dt, 40, PH - 26)
-    this.bank = approach(this.bank, clamp(this.vx / 330, -1, 1), dt * 7)
+    this.y = clamp(this.y + this.vy * dt, 30, PH - 22)
+    this.bank = approach(this.bank, clamp(this.vx / 400, -1, 1), dt * 9)
 
     // power
     const out = this.stats.output

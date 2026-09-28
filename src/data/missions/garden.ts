@@ -55,11 +55,11 @@ function flock(n: number, dur: number, spread: number, path: (u: number) => [num
   }
 }
 const sPath = (x0: number, y0: number, x1: number, y1: number, amp: number, waves = 1) => (u: number): [number, number] =>
-  [lerp(x0, x1, u) + Math.sin(u * Math.PI * 2 * waves) * amp, lerp(y0, y1, u) + Math.sin(u * Math.PI) * 60]
+  [lerp(x0, x1, u) + Math.sin(u * Math.PI * 2 * waves) * amp, lerp(y0, y1, u) + Math.sin(u * Math.PI) * 50]
 const loopPath = (cx: number, cy: number, r: number, from: -1 | 1) => (u: number): [number, number] => {
   const a = from < 0 ? Math.PI + u * TAU * 1.1 : -u * TAU * 1.1
   const k = Math.min(1, u * 4)
-  return [cx + Math.cos(a) * r * k + (1 - k) * (from < 0 ? -140 : 140), cy + Math.sin(a) * r * 0.6 + u * 260 - (1 - k) * 60]
+  return [cx + Math.cos(a) * r * k + (1 - k) * (from < 0 ? -210 : 210), cy + Math.sin(a) * r * 0.5 + u * 230 - (1 - k) * 50]
 }
 
 registerEnemy({
@@ -70,7 +70,7 @@ registerEnemy({
       // Gardener's own flock: circle it, widening, then glide down past you
       const root = e.data as Enemy | null
       e.s.oa += dt * 1.3
-      e.s.or = Math.min(170, (e.s.or ?? 60) + dt * 30)
+      e.s.or = Math.min(220, (e.s.or ?? 78) + dt * 39)
       if (root && !root.dead && e.age < 6) {
         const tx = root.x + Math.cos(e.s.oa) * e.s.or, ty = root.y + Math.sin(e.s.oa) * e.s.or * 0.7
         e.vx = (tx - e.x) * 4; e.vy = (ty - e.y) * 4
@@ -114,7 +114,7 @@ registerEnemy({
   drawBody(ctx, e, w) {
     const open = e.s.open > 0
     // living flowers glow gold as a bloom gathers — tells them apart from the scenery
-    const k = open ? 1 : Math.max(0.25, 1 - e.s.t / 2)
+    const k = open ? 1 : Math.min(1, Math.max(0.25, 1 - e.s.t / 2))
     ctx.globalCompositeOperation = 'lighter'
     ctx.strokeStyle = `rgba(255,214,120,${0.25 + 0.5 * k})`
     ctx.lineWidth = 1.5 + k * 1.5
@@ -149,51 +149,66 @@ export const garden: MissionDef = {
   ],
   script(L) {
     const V = '???'
+    const X = (f: number) => PW * f
     L.at(0.5).radio(V, 'you are not supposed to be here.', 'odd')
-    L.at(3).radio(V, 'stay a while.', 'odd')
-    L.at(4).do(flock(12, 9, 60, sPath(PW * 0.5, -60, PW * 0.2, PH + 80, 140, 1)))
-    L.at(8).wave('garden_fruit', 2, 1.4, F.drift(PW * 0.7, -10, 50))
-    L.at(10).do(flowers(140, 280, 420))
-    L.at(13).do(flock(14, 10, 70, sPath(PW + 60, 120, -80, 420, 0, 1)))
-    L.at(17).radio('KESTREL', 'Halloran? ...Nothing. Static and birdsong.')
-    L.at(19).do(flowers(90, 470)).wave('garden_fruit', 1, 0, F.drift(PW / 2, 0, 45))
-    L.at(22).do(flock(16, 11, 80, loopPath(PW / 2, 200, 160, -1)))
-    L.at(30).gate()
+    L.at(2.5).radio(V, 'stay a while.', 'odd')
+    L.at(3.5).do(flock(16, 9, 80, sPath(X(0.5), -60, X(0.2), PH + 80, 210, 1)))
+    L.at(7).wave('garden_fruit', 3, 1.1, F.drift(X(0.7), -12, 50))
+    L.at(8.5).do(flowers(X(0.2), X(0.4), X(0.6), X(0.8)))
+    L.at(11).do(flock(18, 10, 90, sPath(PW + 60, 100, -80, 360, 0, 1)))
+    L.at(14.5).radio('KESTREL', 'Halloran? ...Nothing. Static and birdsong.')
+    L.at(16).do(flowers(X(0.12), X(0.88))).wave('garden_fruit', 1, 0, F.drift(X(0.5), 0, 45))
+    L.at(18).do(flock(20, 11, 105, loopPath(X(0.5), 170, 220, -1)))
+    L.at(25).gate(12)
 
-    L.at(32).radio(V, 'they sing when you are near. they do not mean it unkindly.', 'odd')
-    L.at(33).do(flowers(80, 180, 280, 380, 480))
-    L.at(37).do(flock(10, 9, 55, sPath(-60, 80, PW + 60, 500, 60, 1.5))).do(flock(10, 9, 55, sPath(PW + 60, 80, -60, 500, 60, 1.5)))
-    L.at(42).do((w) => {
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * TAU
-        w.spawn('garden_fruit', PW / 2 + Math.cos(a) * 70, -80 + Math.sin(a) * 40, { mover: new LineMover(0, 55) })
+    L.at(26.5).radio(V, 'they sing when you are near. they do not mean it unkindly.', 'odd')
+    L.at(27.5).do(flowers(X(0.1), X(0.26), X(0.42), X(0.58), X(0.74), X(0.9)))
+    L.at(31).do(flock(14, 9, 75, sPath(-60, 70, PW + 60, 430, 90, 1.5))).do(flock(14, 9, 75, sPath(PW + 60, 70, -60, 430, 90, 1.5)))
+    L.at(35.5).do((w) => {
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * TAU
+        w.spawn('garden_fruit', PW / 2 + Math.cos(a) * 100, -80 + Math.sin(a) * 40, { mover: new LineMover(0, 55) })
       }
     })
-    L.at(44).radio(V, 'take them. they grow back.', 'odd')
-    L.at(47).do(flowers(200, 360)).do(flock(14, 10, 70, loopPath(PW / 2, 220, 150, 1)))
-    L.at(55).gate()
+    L.at(37).radio(V, 'take them. they grow back.', 'odd')
+    L.at(39.5).do(flowers(X(0.3), X(0.5), X(0.7))).do(flock(18, 10, 95, loopPath(X(0.5), 185, 210, 1)))
+    L.at(46).gate(12)
 
     // murmuration: three flocks folding through each other
-    L.at(57).radio(V, 'listen.', 'odd').intensity(3)
-    L.at(58).do(flock(14, 12, 60, sPath(PW * 0.2, -60, PW * 0.8, PH + 60, 120, 2)))
-    L.at(59.5).do(flock(14, 12, 60, sPath(PW * 0.8, -60, PW * 0.2, PH + 60, 120, 2)))
-    L.at(61).do(flock(18, 12, 90, loopPath(PW / 2, 240, 170, -1)))
-    L.at(63).do((w) => { w.spawn('garden_flower', PW / 2, -50, { mover: new GroundMover(), elite: true }) })
-    L.at(66).wave('garden_fruit', 3, 0.8, F.drift(PW * 0.3, 15, 50))
-    L.at(72).gate()
+    L.at(47.5).radio(V, 'listen.', 'odd').intensity(3)
+    L.at(48.5).do(flock(18, 12, 80, sPath(X(0.2), -60, X(0.8), PH + 60, 180, 2)))
+    L.at(49.7).do(flock(18, 12, 80, sPath(X(0.8), -60, X(0.2), PH + 60, 180, 2)))
+    L.at(51).do(flock(24, 12, 120, loopPath(X(0.5), 205, 240, -1)))
+    L.at(53).do((w) => {
+      w.spawn('garden_flower', X(0.5), -50, { mover: new GroundMover(), elite: true })
+      w.spawn('garden_flower', X(0.15), -90, { mover: new GroundMover() })
+      w.spawn('garden_flower', X(0.85), -90, { mover: new GroundMover() })
+    })
+    L.at(55.5).wave('garden_fruit', 4, 0.7, F.drift(X(0.3), 20, 50))
+    L.at(60.5).gate(12)
 
     // the orchard: rich and quiet, then not quiet
-    L.at(74).intensity(1).radio(V, 'this is the orchard. nothing here is afraid of you.', 'odd')
-    L.at(75).wave('garden_fruit', 4, 0.9, F.drift(PW * 0.25, 5, 45)).wave('garden_fruit', 4, 0.9, F.drift(PW * 0.75, -5, 45))
-    L.at(79).do(flowers(60, 500))
-    L.at(82).intensity(2).do(flowers(160, 400)).do(flock(12, 9, 60, sPath(-60, 160, PW + 60, 260, 40, 1)))
-    L.at(86).do(flowers(280)).do(flock(12, 9, 60, sPath(PW + 60, 160, -60, 300, 40, 1)))
-    L.at(92).gate()
+    L.at(62).intensity(1).radio(V, 'this is the orchard. nothing here is afraid of you.', 'odd')
+    L.at(63).wave('garden_fruit', 5, 0.8, F.drift(X(0.22), 6, 45)).wave('garden_fruit', 5, 0.8, F.drift(X(0.78), -6, 45))
+    L.at(66.5).do(flowers(X(0.1), X(0.9)))
+    L.at(69).intensity(2).do(flowers(X(0.28), X(0.5), X(0.72))).do(flock(16, 9, 80, sPath(-60, 135, PW + 60, 220, 60, 1)))
+    L.at(72.5).do(flowers(X(0.4), X(0.6))).do(flock(16, 9, 80, sPath(PW + 60, 135, -60, 255, 60, 1)))
+    L.at(77.5).gate(12)
 
-    L.at(94).intensity(1).scroll(12, 5).radio(V, 'the gardener is awake now. be polite.', 'odd')
-    L.at(98).do((w) => spawnGardener(w))
-    L.at(99).until('boss_dead')
-    L.at(103).radio(V, 'go on, then. the door is behind you. it was always behind you.', 'odd')
-    L.at(106).do(() => {})
+    // the hedge: a wall of blooms, flocks pouring through its gaps
+    L.at(79).intensity(3).radio(V, 'the hedge. it grew here for you.', 'odd')
+    L.at(80).do(flowers(X(0.08), X(0.22), X(0.36), X(0.64), X(0.78), X(0.92)))
+    L.at(82).do(flock(20, 11, 90, sPath(X(0.5), -60, X(0.5), PH + 80, 0, 1)))
+    L.at(85).do(flock(14, 9, 70, sPath(-60, 90, PW + 60, 300, 70, 1))).do(flock(14, 9, 70, sPath(PW + 60, 90, -60, 300, 70, 1)))
+    L.at(88).wave('garden_fruit', 3, 0.6, F.drift(X(0.5), 0, 50))
+    L.at(89).do(flowers(X(0.3), X(0.5), X(0.7)))
+    L.at(91).do(flock(22, 12, 110, loopPath(X(0.5), 190, 230, 1)))
+    L.at(97).gate(12)
+
+    L.at(99).intensity(1).scroll(12, 5).radio(V, 'the gardener is awake now. be polite.', 'odd')
+    L.at(102.5).do((w) => spawnGardener(w))
+    L.at(103.5).until('boss_dead')
+    L.at(107.5).radio(V, 'go on, then. the door is behind you. it was always behind you.', 'odd')
+    L.at(110.5).do(() => {})
   },
 }

@@ -18,27 +18,29 @@ import { drawSprite, getSprite, glowTexture } from '../../render/sprites'
  * Blackout secret: if the colony grid is already dead the pylons arrive cold.
  */
 
-const HOME_Y = 165
-const PADS: [number, number][] = [[-118, -64], [118, -64], [-118, 56], [118, 56]]
-const MUZZLE = 132
+/** Boss scale for the wide field (art is painted at 1×). */
+const S = 1.3
+const HOME_Y = 140
+const PADS: [number, number][] = [[-118 * S, -64 * S], [118 * S, -64 * S], [-118 * S, 56 * S], [118 * S, 56 * S]]
+const MUZZLE = 132 * S
 
 bossDef({
-  id: 'm3_bastion', hp: 7600, r: 46, sprite: 'm3_bastion_body', layer: 'ground', explode: 'large', score: 30000, z: -1,
+  id: 'm3_bastion', hp: 7600, r: 60, sprite: 'm3_bastion_body', layer: 'ground', explode: 'large', score: 30000, z: -1,
   update(e, w, dt) { bastionUpdate(e, w, dt) },
   drawBody(ctx, e) {
     const s = e.s
-    drawSprite(ctx, getSprite('m3_bastion_body'), e.x, e.y, 0, 1, 1, e.flash)
-    for (const [ox, oy] of PADS) drawSprite(ctx, getSprite('m3_bastion_pylon_dead'), e.x + ox, e.y + oy, 0, 1, 1)
+    drawSprite(ctx, getSprite('m3_bastion_body'), e.x, e.y, 0, S, 1, e.flash)
+    for (const [ox, oy] of PADS) drawSprite(ctx, getSprite('m3_bastion_pylon_dead'), e.x + ox, e.y + oy, 0, S, 1)
     const open = s.open ?? 0
-    if (open > 0) drawSprite(ctx, getSprite('m3_bastion_cannon'), e.x, e.y + 58 + open * 30, 0, 1, 1, e.flash)
+    if (open > 0) drawSprite(ctx, getSprite('m3_bastion_cannon'), e.x, e.y + (58 + open * 30) * S, 0, S, 1, e.flash)
     const d = open * 24
-    drawSprite(ctx, getSprite('m3_bastion_door'), e.x - 13 - d, e.y + 71, 0, 1, 1, e.flash)
-    drawSprite(ctx, getSprite('m3_bastion_door'), e.x + 13 + d, e.y + 71, 0, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m3_bastion_door'), e.x - (13 + d) * S, e.y + 71 * S, 0, S, 1, e.flash)
+    drawSprite(ctx, getSprite('m3_bastion_door'), e.x + (13 + d) * S, e.y + 71 * S, 0, S, 1, e.flash)
     // charging muzzle glow before a sweep
     if (s.charge > 0) {
       const k = 1 - s.charge / 1.3
       ctx.globalCompositeOperation = 'lighter'
-      ctx.drawImage(glowTexture('#ff5aa5', 64, 0.2), e.x - 30 * k - 6, e.y + MUZZLE - 30 * k - 6, 60 * k + 12, 60 * k + 12)
+      ctx.drawImage(glowTexture('#ff5aa5', 64, 0.2), e.x - 39 * k - 8, e.y + MUZZLE - 39 * k - 8, 78 * k + 16, 78 * k + 16)
       ctx.globalCompositeOperation = 'source-over'
     }
   },
@@ -48,7 +50,7 @@ bossDef({
     ctx.globalCompositeOperation = 'lighter'
     ctx.strokeStyle = `rgba(110,225,255,${0.35 + 0.15 * Math.sin(w.time * 5)})`
     ctx.lineWidth = 2
-    ctx.beginPath(); ctx.ellipse(e.x, e.y - 4, 70, 88, 0, 0, TAU); ctx.stroke()
+    ctx.beginPath(); ctx.ellipse(e.x, e.y - 4 * S, 70 * S, 88 * S, 0, 0, TAU); ctx.stroke()
     ctx.fillStyle = `rgba(90,200,255,${0.06 + 0.03 * Math.sin(w.time * 3)})`
     ctx.fill()
     ctx.globalCompositeOperation = 'source-over'
@@ -57,7 +59,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'm3_bastion_pylon', hp: 800, r: 17, sprite: 'm3_bastion_pylon', layer: 'ground', explode: 'medium', score: 2500,
+  id: 'm3_bastion_pylon', hp: 800, r: 22, scale: S, sprite: 'm3_bastion_pylon', layer: 'ground', explode: 'medium', score: 2500,
   update(e, w, dt) {
     if (e.parent!.s.intro) return
     e.s.f = (e.s.f ?? 1 + e.id % 4) - dt * w.diff.fireRate
@@ -73,8 +75,8 @@ bossDef({
     const k = 0.55 + 0.45 * Math.sin(w.time * 9 + e.id)
     ctx.globalCompositeOperation = 'lighter'
     ctx.strokeStyle = `rgba(110,225,255,${0.35 * k})`
-    ctx.lineWidth = 7
-    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(root.x, root.y - 6); ctx.stroke()
+    ctx.lineWidth = 9
+    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(root.x, root.y - 6 * S); ctx.stroke()
     ctx.strokeStyle = `rgba(230,252,255,${0.7 * k})`
     ctx.lineWidth = 2
     ctx.stroke()
@@ -89,7 +91,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'm3_bastion_gun', hp: 1100, r: 18, sprite: 'm3_bastion_gun', layer: 'ground', explode: 'medium', score: 3000,
+  id: 'm3_bastion_gun', hp: 1100, r: 23, scale: S, sprite: 'm3_bastion_gun', layer: 'ground', explode: 'medium', score: 3000,
   update(e, w, dt) {
     const root = e.parent!
     const want = Math.atan2(w.player.y - e.y, w.player.x - e.x)
@@ -102,16 +104,16 @@ bossDef({
     if (e.s.f <= 0) {
       e.s.f = ph >= 3 ? 2.8 : 3.6
       e.s.recoil = 1
-      const tx = w.player.x + rand(-70, 70), ty = w.player.y - rand(50, 130)
-      shell(w, e.x + Math.cos(e.s.aim) * 22, e.y + Math.sin(e.s.aim) * 22, tx, ty, 185, ph >= 3 ? 10 : 8)
-      if (w.diff.sharp) w.after(0.35, () => { if (!e.dead) shell(w, e.x, e.y, tx + rand(-90, 90), ty - 60, 185, 6) })
-      w.parts.spawn(P.Smoke, e.x, e.y + 20, 0, 30, 0.8, 6, 20, C.smokeLight, 1, true)
+      const tx = w.player.x + rand(-90, 90), ty = w.player.y - rand(40, 110)
+      shell(w, e.x + Math.cos(e.s.aim) * 22 * S, e.y + Math.sin(e.s.aim) * 22 * S, tx, ty, 185, ph >= 3 ? 10 : 8)
+      if (w.diff.sharp) w.after(0.35, () => { if (!e.dead) shell(w, e.x, e.y, tx + rand(-120, 120), ty - 50, 185, 6) })
+      w.parts.spawn(P.Smoke, e.x, e.y + 20 * S, 0, 30, 0.8, 6, 20, C.smokeLight, 1, true)
     }
   },
   drawBody(ctx, e) {
-    drawSprite(ctx, getSprite('m3_bastion_gun'), e.x, e.y, 0, 1, 1, e.flash)
-    const a = e.s.aim ?? Math.PI / 2, rc = (e.s.recoil ?? 0) * 5
-    drawSprite(ctx, getSprite('m3_bastion_gun_barrel'), e.x - Math.cos(a) * rc, e.y - Math.sin(a) * rc, a - Math.PI / 2, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m3_bastion_gun'), e.x, e.y, 0, S, 1, e.flash)
+    const a = e.s.aim ?? Math.PI / 2, rc = (e.s.recoil ?? 0) * 5 * S
+    drawSprite(ctx, getSprite('m3_bastion_gun_barrel'), e.x - Math.cos(a) * rc, e.y - Math.sin(a) * rc, a - Math.PI / 2, S, 1, e.flash)
   },
   onDeath(e, w) { partDown(w, e, 'medium') },
 })
@@ -120,7 +122,7 @@ function bastionUpdate(e: Enemy, w: World, dt: number) {
   const s = e.s
   s.time = (s.time ?? 0) + dt
   if (s.intro) {
-    e.y += Math.min(40 * dt, HOME_Y - e.y)
+    e.y += Math.min(46 * dt, HOME_Y - e.y)
     treadDust(e, w, 1)
     if (e.y >= HOME_Y - 0.5) {
       s.intro = 0
@@ -151,15 +153,15 @@ function bastionUpdate(e: Enemy, w: World, dt: number) {
 
   // movement: guard sway, then the walk
   if (s.phase >= 3) {
-    const tx = clamp(w.player.x, 150, PW - 150)
-    const vx = clamp(tx - e.x, -34, 34)
+    const tx = clamp(w.player.x, 200, PW - 200)
+    const vx = clamp(tx - e.x, -45, 45)
     e.x += vx * dt
-    e.y = Math.min(HOME_Y + 55, e.y + 6 * dt)
+    e.y = Math.min(HOME_Y + 40, e.y + 5 * dt)
     treadDust(e, w, Math.abs(vx) > 5 ? 1 : 0.3)
-    if (Math.random() < 0.3) w.parts.spawn(P.Smoke, e.x + rand(-60, 60), e.y + rand(-60, 60), 0, -30, 1.2, 8, 26, C.smokeDark, 0.5)
+    if (Math.random() < 0.3) w.parts.spawn(P.Smoke, e.x + rand(-78, 78), e.y + rand(-78, 78), 0, -30, 1.2, 8, 26, C.smokeDark, 0.5)
   } else {
-    const tx = PW / 2 + Math.sin(s.time * 0.35) * 70
-    const vx = clamp(tx - e.x, -22, 22)
+    const tx = PW / 2 + Math.sin(s.time * 0.35) * 105
+    const vx = clamp(tx - e.x, -30, 30)
     e.x += vx * dt
     treadDust(e, w, 0.3)
   }
@@ -168,7 +170,7 @@ function bastionUpdate(e: Enemy, w: World, dt: number) {
   // phase 1: the keep lobs slow fans over the shield
   if (s.phase === 1) {
     s.fanT = (s.fanT ?? 2) - dt * w.diff.fireRate
-    if (s.fanT <= 0) { s.fanT = 4.4; fan(w, e.x, e.y + 20, Math.PI / 2, 7, 1.3, 135, BulletKind.Orb, 10) }
+    if (s.fanT <= 0) { s.fanT = 4.4; fan(w, e.x, e.y + 20 * S, Math.PI / 2, 9, 1.5, 140, BulletKind.Orb, 10) }
     return
   }
 
@@ -186,20 +188,20 @@ function bastionUpdate(e: Enemy, w: World, dt: number) {
       w.after(i * 0.2, () => {
         if (e.dead) return
         const side = i % 2 ? 1 : -1
-        missile(w, e.x + side * 78, e.y + 20, Math.PI / 2 + side * 1.1, 135, 1.5, 8)
+        missile(w, e.x + side * 78 * S, e.y + 20 * S, Math.PI / 2 + side * 1.1, 135, 1.5, 8)
       })
     }
   }
   if (s.phase === 2) {
     s.pulseT = (s.pulseT ?? 3) - dt * w.diff.fireRate
-    if (s.pulseT <= 0) { s.pulseT = 5; ring(w, e.x, e.y - 6, 14, 120, rand(0, TAU)) }
+    if (s.pulseT <= 0) { s.pulseT = 5; ring(w, e.x, e.y - 6 * S, 16, 120, rand(0, TAU)) }
   }
   if (s.phase >= 3) {
     s.ringT -= dt * w.diff.fireRate
     if (s.ringT <= 0) {
       s.ringT = 2.5
       s.ringN = (s.ringN ?? 0) + 1
-      ring(w, e.x, e.y - 6, 18, 125, s.ringN * 0.17, s.ringN % 2 ? BulletKind.Orb : BulletKind.Ring, 10)
+      ring(w, e.x, e.y - 6 * S, 18, 125, s.ringN * 0.17, s.ringN % 2 ? BulletKind.Orb : BulletKind.Ring, 10)
     }
     s.burstT -= dt * w.diff.fireRate
     if (s.burstT <= 0) {
@@ -215,20 +217,20 @@ function lanceSweep(e: Enemy, w: World) {
   const start = Math.PI / 2 - dir * 1.45
   const sweep = dir * 0.49
   e.s.charge = 1.3
-  w.laser(e.x, e.y + MUZZLE, start, 900, 18, 1.3, 2.5, e, sweep)
+  w.laser(e.x, e.y + MUZZLE, start, 1000, 22, 1.3, 2.5, e, sweep)
   sfxAt('boss_phase', e.x, 0.25, 1.6)
 }
 
 function treadDust(e: Enemy, w: World, k: number) {
   if (Math.random() < 0.5 * k) {
     const side = Math.random() < 0.5 ? -1 : 1
-    w.parts.spawn(P.Smoke, e.x + side * 84 + rand(-14, 14), e.y + (Math.random() < 0.5 ? -20 : 90), rand(-20, 20), 20, 1.1, 6, 20, C.ice, 1, true)
+    w.parts.spawn(P.Smoke, e.x + side * 84 * S + rand(-14, 14), e.y + (Math.random() < 0.5 ? -20 : 90) * S, rand(-20, 20), 20, 1.1, 6, 20, C.ice, 1, true)
   }
 }
 
 /** Big collapse: the body sags into rubble under a column of dust and fire. */
 function collapse(w: World, x: number, y: number) {
-  const mk = (sprite: string, alpha: number): Decor => ({ sprite, x, y, rot: 0, scale: 1, depth: 0, vx: 0, alpha, above: false })
+  const mk = (sprite: string, alpha: number): Decor => ({ sprite, x, y, rot: 0, scale: S, depth: 0, vx: 0, alpha, above: false })
   const rub = mk('m3_bastion_rubble', 0), body = mk('m3_bastion_body', 1)
   w.decor.push(rub, body)
   const t0 = w.time
@@ -236,28 +238,28 @@ function collapse(w: World, x: number, y: number) {
     const t = w.time - t0
     const k = clamp((t - 0.8) / 2, 0, 1)
     body.alpha = 1 - k
-    body.scale = 1 - k * 0.08
+    body.scale = S * (1 - k * 0.08)
     body.x = x + (Math.random() - 0.5) * 6 * (1 - k)
     rub.alpha = k
-    if (Math.random() < 0.7) w.parts.spawn(P.Smoke, x + rand(-120, 120), y + rand(-90, 90), rand(-30, 30), -20, 1.8, 12, 44, C.ice, 0.6, true)
-    if (Math.random() < 0.1 && t < 2.6) explode(w, x + rand(-110, 110), y + rand(-90, 90), 'medium', true, C.orange, true)
+    if (Math.random() < 0.7) w.parts.spawn(P.Smoke, x + rand(-156, 156), y + rand(-117, 117), rand(-30, 30), -20, 1.8, 12, 44, C.ice, 0.6, true)
+    if (Math.random() < 0.1 && t < 2.6) explode(w, x + rand(-143, 143), y + rand(-117, 117), 'medium', true, C.orange, true)
     if (t < 3.2) w.after(0.03, tick)
     else body.y = 9999
   }
   tick()
-  w.after(1.2, () => chainExplosion(w, x, y + 60, 90, 10, 1.1, 'large'))
-  w.after(2, () => { for (let i = 0; i < 3; i++) w.parts.spawn(P.Ring, x, y, 0, 0, 1 + i * 0.3, 60, 300 + i * 90, C.ice, 0, true) })
+  w.after(1.2, () => chainExplosion(w, x, y + 78, 117, 10, 1.1, 'large'))
+  w.after(2, () => { for (let i = 0; i < 3; i++) w.parts.spawn(P.Ring, x, y, 0, 0, 1 + i * 0.3, 60, (300 + i * 90) * S, C.ice, 0, true) })
 }
 
 export function spawnBastion(w: World, blackout: boolean) {
-  const e = w.spawn('m3_bastion', PW / 2, -140)
+  const e = w.spawn('m3_bastion', PW / 2, -190)
   e.s.intro = 1
   e.s.phase = 1
   e.s.blackout = blackout ? 1 : 0
   e.armor = 0
   e.s.cloak = 1
   const parts: Enemy[] = []
-  for (const ox of [-62, 62]) parts.push(w.spawn('m3_bastion_gun', e.x + ox, e.y - 40, { parent: e, ox, oy: -40, tag: 'gun' }))
+  for (const ox of [-62 * S, 62 * S]) parts.push(w.spawn('m3_bastion_gun', e.x + ox, e.y - 40 * S, { parent: e, ox, oy: -40 * S, tag: 'gun' }))
   if (!blackout) for (const [ox, oy] of PADS) parts.push(w.spawn('m3_bastion_pylon', e.x + ox, e.y + oy, { parent: e, ox, oy, tag: 'pylon' }))
   startBoss(w, e, 'Bastion — colony siege crawler', parts)
   return e

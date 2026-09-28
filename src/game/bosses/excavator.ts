@@ -21,30 +21,33 @@ import { drawSprite, getSprite } from '../../render/sprites'
  *   and hurls them at you — shoot them while they hang.
  */
 
-const Y0 = 150
-const ARM_REST = 190
-const ARM_REACH = 400
-const ARM_W = 17
+/** Boss scale for the wide field (art is painted at 1×). */
+const S = 1.3
+const Y0 = 128
+const ARM_REST = 228
+/** Kept short of the bottom edge: under the swing's reach is the radial escape. */
+const ARM_REACH = 420
+const ARM_W = 22
 
 bossDef({
-  id: 'm4_excavator', hp: 11000, r: 58, sprite: 'm4_exc_body', explode: 'huge', score: 30000,
+  id: 'm4_excavator', hp: 12500, r: 75, scale: S, sprite: 'm4_exc_body', explode: 'huge', score: 30000,
   update(e, w, dt) { excUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
-    drawSprite(ctx, getSprite('m4_exc_body'), e.x, e.y, 0, 1, 1, e.flash)
-    const cy = e.y + 4
+    drawSprite(ctx, getSprite('m4_exc_body'), e.x, e.y, 0, S, 1, e.flash)
+    const cy = e.y + 4 * S
     if (e.s.phase >= 2) {
       const k = 0.65 + 0.35 * Math.sin(w.time * 7)
       ctx.globalCompositeOperation = 'lighter'
-      const g = ctx.createRadialGradient(e.x, cy, 2, e.x, cy, 30)
+      const g = ctx.createRadialGradient(e.x, cy, 2, e.x, cy, 30 * S)
       g.addColorStop(0, `rgba(255,252,230,${k})`)
       g.addColorStop(0.35, `rgba(255,190,70,${k * 0.9})`)
       g.addColorStop(1, 'rgba(255,90,20,0)')
       ctx.fillStyle = g
-      ctx.beginPath(); ctx.arc(e.x, cy, 30, 0, TAU); ctx.fill()
+      ctx.beginPath(); ctx.arc(e.x, cy, 30 * S, 0, TAU); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
-    } else drawSprite(ctx, getSprite('m4_exc_shutter'), e.x, cy, 0, 1, 1, e.flash)
+    } else drawSprite(ctx, getSprite('m4_exc_shutter'), e.x, cy, 0, S, 1, e.flash)
     // laser wedge telegraph
-    if (e.s.wedgeT > 0) wedge(ctx, e.x, e.y + 30, e.s.wedgeA0, e.s.wedgeA1, 640, e.s.wedgeT)
+    if (e.s.wedgeT > 0) wedge(ctx, e.x, e.y + 30 * S, e.s.wedgeA0, e.s.wedgeA1, 900, e.s.wedgeT)
     // tractor beams toward captured rocks
     const rocks = (e.data as Enemy[] | null) ?? []
     ctx.globalCompositeOperation = 'lighter'
@@ -62,15 +65,15 @@ bossDef({
     // the machine comes apart: shoulders, maw, hoppers, then the core
     const pts: [number, number, number][] = [[-118, -8, 0.2], [118, -8, 0.5], [0, 100, 0.8], [-56, 60, 1.1], [56, 60, 1.3]]
     for (const [dx, dy, t] of pts) w.after(t, () => {
-      explode(w, e.x + dx, e.y + dy, 'large')
-      for (let i = 0; i < 14; i++) w.parts.spawn(P.Debris, e.x + dx, e.y + dy, rand(-260, 260), rand(-220, 200), rand(0.8, 1.6), rand(4, 9), 1, C.smokeLight, 1.5)
+      explode(w, e.x + dx * S, e.y + dy * S, 'large')
+      for (let i = 0; i < 14; i++) w.parts.spawn(P.Debris, e.x + dx * S, e.y + dy * S, rand(-260, 260), rand(-220, 200), rand(0.8, 1.6), rand(4, 9), 1, C.smokeLight, 1.5)
     })
-    w.after(1.6, () => { for (let i = 0; i < 10; i++) w.pickup(PickupKind.CreditBig, e.x + rand(-80, 80), e.y + rand(-50, 50), 60) })
+    w.after(1.6, () => { for (let i = 0; i < 10; i++) w.pickup(PickupKind.CreditBig, e.x + rand(-100, 100), e.y + rand(-60, 60), 60) })
   },
 })
 
 bossDef({
-  id: 'm4_exc_arm', hp: 2400, r: 24, sprite: 'm4_exc_shoulder', explode: 'large', score: 5000,
+  id: 'm4_exc_arm', hp: 2700, r: 31, scale: S, sprite: 'm4_exc_shoulder', explode: 'large', score: 5000,
   init(e) { e.s.len = ARM_REST; e.s.state = 0 },
   update(e, w, dt) { armUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
@@ -81,18 +84,18 @@ bossDef({
     ctx.save()
     ctx.translate(s.sx, s.sy)
     ctx.rotate(s.ang - Math.PI / 2)
-    ctx.drawImage(sp.img, -sp.w / 2, -10, sp.w, s.len + 10)
-    if (e.flash > 0) { ctx.globalAlpha = Math.min(1, e.flash); ctx.drawImage(sp.flash, -sp.w / 2, -10, sp.w, s.len + 10); ctx.globalAlpha = 1 }
+    ctx.drawImage(sp.img, -sp.w * S / 2, -10 * S, sp.w * S, s.len + 10 * S)
+    if (e.flash > 0) { ctx.globalAlpha = Math.min(1, e.flash); ctx.drawImage(sp.flash, -sp.w * S / 2, -10 * S, sp.w * S, s.len + 10 * S); ctx.globalAlpha = 1 }
     ctx.restore()
     if (s.state === 2) {
       // grinding sparks at the bit
       ctx.globalCompositeOperation = 'lighter'
       ctx.fillStyle = 'rgba(255,200,120,0.6)'
       const tx = s.sx + Math.cos(s.ang) * s.len, ty = s.sy + Math.sin(s.ang) * s.len
-      ctx.beginPath(); ctx.arc(tx, ty, 9 + Math.random() * 4, 0, TAU); ctx.fill()
+      ctx.beginPath(); ctx.arc(tx, ty, (9 + Math.random() * 4) * S, 0, TAU); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
     }
-    drawSprite(ctx, getSprite('m4_exc_shoulder'), s.sx, s.sy, w.time * (s.state === 2 ? 6 : 0.5), 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m4_exc_shoulder'), s.sx, s.sy, w.time * (s.state === 2 ? 6 : 0.5), S, 1, e.flash)
   },
   onDeath(e, w) {
     partDown(w, e)
@@ -102,7 +105,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'm4_exc_maw', hp: 2000, r: 30, sprite: 'm4_exc_maw', explode: 'large', score: 4000,
+  id: 'm4_exc_maw', hp: 2300, r: 39, scale: S, sprite: 'm4_exc_maw', explode: 'large', score: 4000,
   update(e, w, dt) {
     const root = e.parent!
     if (root.s.intro) return
@@ -114,21 +117,21 @@ bossDef({
       const n = root.s.phase === 1 ? 3 : 2
       for (let i = 0; i < n; i++) {
         const a = Math.PI / 2 + (i - (n - 1) / 2) * 0.42 + rand(-0.06, 0.06)
-        const r = w.spawn('rock_m', e.x, e.y + 20, { mover: new LineMover(Math.cos(a) * 150, Math.sin(a) * 150) })
+        const r = w.spawn('rock_m', e.x, e.y + 20 * S, { mover: new LineMover(Math.cos(a) * 160, Math.sin(a) * 160) })
         r.s.ignoreGate = 1
       }
-      for (let i = 0; i < 10; i++) w.parts.spawn(P.Debris, e.x + rand(-20, 20), e.y + 24, rand(-120, 120), rand(60, 240), rand(0.4, 0.8), rand(2, 4), 1, C.smokeLight, 2)
+      for (let i = 0; i < 10; i++) w.parts.spawn(P.Debris, e.x + rand(-26, 26), e.y + 24 * S, rand(-120, 120), rand(60, 240), rand(0.4, 0.8), rand(2, 4), 1, C.smokeLight, 2)
       w.addShake(3)
     }
     e.s.chew = (e.s.chew ?? 1.2) - dt * w.diff.fireRate
     if (e.s.chew <= 0) {
       e.s.chew = 3.6
-      aimed(w, e.x, e.y + 24, 230, w.diff.sharp ? 5 : 3, 0.14, BulletKind.Shard, 10)
+      aimed(w, e.x, e.y + 24 * S, 230, w.diff.sharp ? 5 : 3, 0.14, BulletKind.Shard, 10)
     }
   },
   drawBody(ctx, e) {
     const j = e.s.jaw ?? 0
-    drawSprite(ctx, getSprite('m4_exc_maw'), e.x + (j > 0 ? rand(-1.5, 1.5) : 0), e.y + j * 4, 0, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m4_exc_maw'), e.x + (j > 0 ? rand(-2, 2) : 0), e.y + j * 5, 0, S, 1, e.flash)
   },
   onDeath(e, w) { partDown(w, e) },
 })
@@ -228,14 +231,14 @@ function excUpdate(e: Enemy, w: World, dt: number) {
   if (s.intro) {
     e.y += (Y0 - e.y) * Math.min(1, dt * 0.8)
     if (Math.abs(e.y - Y0) < 3) s.intro = 0
-    if (Math.random() < 0.6) w.parts.spawn(P.Smoke, e.x + rand(-90, 90), e.y - 90, rand(-20, 20), -40, 1, 8, 20, C.smokeDark, 0.5)
+    if (Math.random() < 0.6) w.parts.spawn(P.Smoke, e.x + rand(-120, 120), e.y - 120, rand(-20, 20), -40, 1, 8, 20, C.smokeDark, 0.5)
     return
   }
   const parts = w.bossParts
   const arms = alive(parts, 'arm')
-  const ty = s.phase === 3 ? Y0 + 20 : Y0
-  const tx = PW / 2 + Math.sin(s.time * 0.35) * (s.phase === 1 ? 60 : 90)
-  e.x += clamp((tx - e.x) * 1.2, -50, 50) * dt
+  const ty = s.phase === 3 ? Y0 + 17 : Y0
+  const tx = PW / 2 + Math.sin(s.time * 0.35) * (s.phase === 1 ? 90 : 135)
+  e.x += clamp((tx - e.x) * 1.2, -70, 70) * dt
   e.y += (ty - e.y) * Math.min(1, dt)
   if (s.wedgeT > 0) s.wedgeT = Math.max(0, s.wedgeT - dt)
 
@@ -244,8 +247,8 @@ function excUpdate(e: Enemy, w: World, dt: number) {
     s.phase = 2
     e.armor = 1
     phaseShift(w, 'YOU BROKE ITS HANDS. IT STILL HAS A MOUTH.')
-    explode(w, e.x, e.y + 4, 'large')
-    for (let i = 0; i < 20; i++) w.parts.spawn(P.Debris, e.x, e.y + 4, rand(-300, 300), rand(-200, 300), rand(0.6, 1.2), rand(4, 8), 1, C.smokeLight, 1.2)
+    explode(w, e.x, e.y + 4 * S, 'large')
+    for (let i = 0; i < 20; i++) w.parts.spawn(P.Debris, e.x, e.y + 4 * S, rand(-300, 300), rand(-200, 300), rand(0.6, 1.2), rand(4, 8), 1, C.smokeLight, 1.2)
     s.laserT = 1.8
   }
   if (s.phase === 2 && e.hp < e.maxHp * 0.4) {
@@ -265,8 +268,8 @@ function excUpdate(e: Enemy, w: World, dt: number) {
     s.shellT = (s.shellT ?? 3) - dt * w.diff.fireRate
     if (s.shellT <= 0) {
       s.shellT = 4.2
-      const hx = e.x + (Math.random() < 0.5 ? -56 : 56)
-      shell(w, hx, e.y + 60, w.player.x + rand(-40, 40), Math.min(w.player.y - 90, e.y + 330), 170, 10, 130)
+      const hx = e.x + (Math.random() < 0.5 ? -56 : 56) * S
+      shell(w, hx, e.y + 60 * S, w.player.x + rand(-40, 40), Math.min(w.player.y - 90, e.y + 330), 170, 10, 130)
     }
   } else {
     // core cutting laser: one half of the screen at a time, wedge-telegraphed
@@ -279,13 +282,13 @@ function excUpdate(e: Enemy, w: World, dt: number) {
       const aFar = s.lside > 0 ? 0.3 : Math.PI - 0.3
       const aNear = s.lside > 0 ? 1.38 : Math.PI - 1.38
       const sweep = (aNear - aFar) / life
-      w.laser(e.x, e.y + 30, aFar - sweep * warn, 900, 16, warn, life, e, sweep)
+      w.laser(e.x, e.y + 30 * S, aFar - sweep * warn, 900, 16, warn, life, e, sweep)
       s.wedgeA0 = aFar; s.wedgeA1 = aNear; s.wedgeT = warn + life
     }
     // rock storm
     s.stormT = (s.stormT ?? 0.5) - dt
     if (s.stormT <= 0) {
-      s.stormT = s.phase === 3 ? 1.3 : 0.9
+      s.stormT = s.phase === 3 ? 1.0 : 0.7
       const id = Math.random() < 0.3 ? 'rock_m' : 'rock_s'
       const r = w.spawn(id, rand(30, PW - 30), -30, { mover: new LineMover(rand(-30, 30), rand(90, 140)) })
       r.s.ignoreGate = 1
@@ -302,9 +305,9 @@ function excUpdate(e: Enemy, w: World, dt: number) {
     if (s.pullT <= 0) {
       s.pullT = 6.5
       const rocks: Enemy[] = []
-      const spots: [number, number][] = [[-50, 40], [PW + 50, 60], [PW / 2 + rand(-120, 120), -60]]
+      const spots: [number, number][] = [[-50, 40], [PW + 50, 60], [PW / 2 + rand(-180, 180), -60]]
       spots.forEach(([x, y], i) => {
-        const r = w.spawn('rock_l', x, y, { mover: new TractorMover(e, (i - 1) * 150, 110 + (i === 1 ? 20 : 0), 0.9 + i * 0.55) })
+        const r = w.spawn('rock_l', x, y, { mover: new TractorMover(e, (i - 1) * 195, 140 + (i === 1 ? 20 : 0), 0.9 + i * 0.55) })
         r.s.ignoreGate = 1
         r.noCull = true
         rocks.push(r)
@@ -316,7 +319,7 @@ function excUpdate(e: Enemy, w: World, dt: number) {
     s.fanT = (s.fanT ?? 2) - dt * w.diff.fireRate
     if (s.fanT <= 0) {
       s.fanT = 2.6
-      fan(w, e.x, e.y + 40, Math.PI / 2, 7, 1.3, 150, BulletKind.Orb, 10)
+      fan(w, e.x, e.y + 40 * S, Math.PI / 2, 9, 1.5, 160, BulletKind.Orb, 10)
     }
   }
 }
@@ -356,13 +359,13 @@ class TractorMover {
 }
 
 export function spawnExcavator(w: World) {
-  const e = w.spawn('m4_excavator', PW / 2, -170)
+  const e = w.spawn('m4_excavator', PW / 2, -210)
   e.s.intro = 1
   e.s.phase = 1
   e.armor = 0
   const parts: Enemy[] = []
-  for (const ox of [-118, 118]) parts.push(w.spawn('m4_exc_arm', e.x + ox, e.y - 8, { parent: e, ox, oy: -8, tag: 'arm' }))
-  parts.push(w.spawn('m4_exc_maw', e.x, e.y + 104, { parent: e, ox: 0, oy: 104, tag: 'maw' }))
+  for (const ox of [-118 * S, 118 * S]) parts.push(w.spawn('m4_exc_arm', e.x + ox, e.y - 8 * S, { parent: e, ox, oy: -8 * S, tag: 'arm' }))
+  parts.push(w.spawn('m4_exc_maw', e.x, e.y + 104 * S, { parent: e, ox: 0, oy: 104 * S, tag: 'maw' }))
   startBoss(w, e, 'Excavator — belt strip-miner', parts)
   return e
 }

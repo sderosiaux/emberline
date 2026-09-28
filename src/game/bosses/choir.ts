@@ -25,42 +25,44 @@ import { spawnFx } from './revenant'
  *     debris, the heart chases you with a rose of bullets that always leaves a
  *     door, and scissor beams that never fully close.
  */
-const WALL_Y = 72
-const HEART_Y = 205
+const WALL_Y = 52
+const HEART_Y = 175
+/** Boss scale for the wide field (art is painted at 1×). Below Smelter's 1.3: the pipes already reach half-way down. */
+const S = 1.15
 
-const PIPES: [number, number][] = [[-230, 128], [-165, 128], [-100, 128], [100, 128], [165, 128], [230, 128]]
-const VOICES: [number, number][] = [[-56, 86], [56, 86]]
+const PIPES: [number, number][] = [[-230, 128], [-165, 128], [-100, 128], [100, 128], [165, 128], [230, 128]].map(([x, y]) => [x * S, y * S])
+const VOICES: [number, number][] = [[-56, 86], [56, 86]].map(([x, y]) => [x * S, y * S])
 
 bossDef({
-  id: 'm7_choir', hp: 35000, r: 42, sprite: 'm7_heart', explode: 'huge', score: 100000,
+  id: 'm7_choir', hp: 24000, r: 48, sprite: 'm7_heart', explode: 'huge', score: 100000,
   update(e, w, dt) { choirUpdate(e, w, dt) },
   drawBody(ctx, e, w) { drawChoir(ctx, e, w) },
 })
 
 bossDef({
-  id: 'm7_pipe', hp: 1600, r: 20, sprite: 'm7_pipe', explode: 'large', score: 5000,
+  id: 'm7_pipe', hp: 1600, r: 23, scale: S, sprite: 'm7_pipe', explode: 'large', score: 5000,
   update(e, w, dt) { pipeUpdate(e, w, dt) },
   drawBody(ctx, e) {
-    drawSprite(ctx, getSprite('m7_pipe'), e.x, e.y, 0, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m7_pipe'), e.x, e.y, 0, S, 1, e.flash)
     const k = e.s.tell ?? 0
     if (k <= 0) return
     // the pipe draws breath: its mouth brightens before it plays
     ctx.globalCompositeOperation = 'lighter'
-    const my = e.y + 60
-    const g = ctx.createRadialGradient(e.x, my, 0, e.x, my, 10 + k * 14)
+    const my = e.y + 60 * S
+    const g = ctx.createRadialGradient(e.x, my, 0, e.x, my, (10 + k * 14) * S)
     g.addColorStop(0, `rgba(255,255,255,${0.4 + 0.5 * k})`)
     g.addColorStop(0.4, `rgba(196,155,255,${0.5 * k})`)
     g.addColorStop(1, 'rgba(196,155,255,0)')
     ctx.fillStyle = g
-    ctx.beginPath(); ctx.arc(e.x, my, 10 + k * 14, 0, TAU); ctx.fill()
+    ctx.beginPath(); ctx.arc(e.x, my, (10 + k * 14) * S, 0, TAU); ctx.fill()
     ctx.globalCompositeOperation = 'source-over'
 
   },
-  onDeath(e, w) { partDown(w, e); sparks(w, e.x, e.y + 50, 20, C.gold, 260, 0.5) },
+  onDeath(e, w) { partDown(w, e); sparks(w, e.x, e.y + 50 * S, 20, C.gold, 260, 0.5) },
 })
 
 bossDef({
-  id: 'm7_voice', hp: 2600, r: 28, sprite: 'm7_voice', explode: 'large', score: 6000,
+  id: 'm7_voice', hp: 2600, r: 32, scale: S, sprite: 'm7_voice', explode: 'large', score: 6000,
   update(e, w) {
     const root = e.parent!
     if (root.s.intro || root.s.phase !== 1) return
@@ -75,19 +77,19 @@ bossDef({
       else {
         // chorus: a fan of wave notes that bends back across the field
         const bend = side * (e.s.n % 2 ? 0.5 : -0.5)
-        for (let i = 0; i < 9; i++) {
-          const b = w.fire(e.x, e.y + 20, Math.PI / 2 + (i - 4) * 0.18 - bend * 0.8, 150, BulletKind.Wave, 11)
+        for (let i = 0; i < 11; i++) {
+          const b = w.fire(e.x, e.y + 20 * S, Math.PI / 2 + (i - 5) * 0.17 - bend * 0.8, 150, BulletKind.Wave, 11)
           if (b) b.curve = bend
         }
         enemySfx(w, e.x, true)
       }
     }
   },
-  onDeath(e, w) { partDown(w, e); w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.5, 20, 120, C.violet) },
+  onDeath(e, w) { partDown(w, e); w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.5, 20, 140, C.violet) },
 })
 
 bossDef({
-  id: 'm7_petal', hp: 1500, r: 22, sprite: 'm7_petal', explode: 'medium', score: 2000,
+  id: 'm7_petal', hp: 1500, r: 25, scale: S, sprite: 'm7_petal', explode: 'medium', score: 2000,
   init(e) { e.hidden = true; e.armor = 0 },
   update(e, w) {
     const root = e.parent!
@@ -118,7 +120,7 @@ function pipeUpdate(e: Enemy, w: World, dt: number) {
     e.s.nt = (e.s.nt ?? 0) - dt * w.diff.fireRate
     if (e.s.nt <= 0 && canFire(w, e)) {
       e.s.nt = 0.09
-      w.fire(e.x + Math.sin(w.time * 9) * 5, e.y + 62, Math.PI / 2, 235, BulletKind.Orb, 11)
+      w.fire(e.x + Math.sin(w.time * 9) * 5, e.y + 62 * S, Math.PI / 2, 235, BulletKind.Orb, 11)
       enemySfx(w, e.x)
     }
   }
@@ -128,7 +130,7 @@ function pipeUpdate(e: Enemy, w: World, dt: number) {
 function playPipe(w: World, p: Enemy, beam: boolean) {
   p.s.tell = 1
   if (beam) {
-    w.laser(p.x, p.y + 64, Math.PI / 2, 900, 22, 1.15, 1.2, p)
+    w.laser(p.x, p.y + 64 * S, Math.PI / 2, 900, 25, 1.15, 1.2, p)
   } else {
     w.after(0.65, () => { if (!p.dead) p.s.play = 1.5 })
   }
@@ -142,7 +144,7 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
   if (s.intro) {
     e.y += (WALL_Y - e.y) * Math.min(1, dt * 0.8)
     w.addShake(0.8)
-    if (Math.random() < 0.6) w.parts.spawn(P.Smoke, rand(0, PW), e.y + rand(40, 90), rand(-20, 20), 20, 1.2, 10, 30, C.smokeDark, 0.5)
+    if (Math.random() < 0.6) w.parts.spawn(P.Smoke, rand(0, PW), e.y + rand(40, 90) * S, rand(-20, 20), 20, 1.2, 10, 30, C.smokeDark, 0.5)
     if (Math.abs(e.y - WALL_Y) < 3) {
       s.intro = 0
       w.emit({ type: 'radio', who: 'CHOIR', text: 'WE ARE THE CHOIR. WE HAVE ALWAYS BEEN SINGING. NOW LISTEN.', tone: 'enemy' })
@@ -173,7 +175,7 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
     s.humT = (s.humT ?? 2.5) - dt * w.diff.fireRate
     if (s.humT <= 0 && w.player.alive) {
       s.humT = 2.2 + (pipes.length + voices.length) * 0.25
-      ring(w, e.x, e.y + 40, 20, 105, s.time * 0.7, BulletKind.Wave, 11)
+      ring(w, e.x, e.y + 40 * S, 22, 105, s.time * 0.7, BulletKind.Wave, 11)
     }
     if (pipes.length === 0 && voices.length === 0) {
       s.phase = 2
@@ -194,7 +196,7 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
     s.trans = Math.min(1, s.trans + dt / 3)
     const k = s.trans
     e.y = WALL_Y + (HEART_Y - WALL_Y) * (k * k * (3 - 2 * k))
-    if (Math.random() < 0.8) w.parts.spawn(P.Debris, PW / 2 + rand(-60, 60), WALL_Y + rand(-40, 60), rand(-200, 200), rand(-50, 150), 1, rand(3, 7), 1, C.smokeDark, 1)
+    if (Math.random() < 0.8) w.parts.spawn(P.Debris, PW / 2 + rand(-60, 60) * S, WALL_Y + rand(-40, 60) * S, rand(-200, 200), rand(-50, 150), 1, rand(3, 7), 1, C.smokeDark, 1)
     if (k >= 1) {
       e.armor = 1
       for (const p of petals) { p.hidden = false; p.armor = 1 }
@@ -217,13 +219,13 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
 
   // movement
   if (s.phase === 2) {
-    const tx = PW / 2 + Math.sin(s.time * 0.4) * 110
-    e.x += clamp(tx - e.x, -50 * dt, 50 * dt)
-    e.y += (HEART_Y + Math.sin(s.time * 0.7) * 14 - e.y) * Math.min(1, dt * 2)
+    const tx = PW / 2 + Math.sin(s.time * 0.4) * 164
+    e.x += clamp(tx - e.x, -70 * dt, 70 * dt)
+    e.y += (HEART_Y + Math.sin(s.time * 0.7) * 12 - e.y) * Math.min(1, dt * 2)
   } else {
-    const tx = clamp(w.player.x, 90, PW - 90)
-    e.x += clamp(tx - e.x, -62 * dt, 62 * dt)
-    e.y += (235 + Math.sin(s.time * 0.9) * 22 - e.y) * Math.min(1, dt * 1.5)
+    const tx = clamp(w.player.x, 120, PW - 120)
+    e.x += clamp(tx - e.x, -82 * dt, 82 * dt)
+    e.y += (200 + Math.sin(s.time * 0.9) * 19 - e.y) * Math.min(1, dt * 1.5)
     s.fall = (s.fall ?? 0) + dt
   }
   placePetals(e, parts, s.time, s.phase === 3 ? 1.5 : 0.8)
@@ -239,8 +241,8 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
       s.callT = 13
       const cantors = w.enemies.filter((o) => !o.dead && o.def.id === 'cantor').length
       for (let i = cantors; i < 2; i++) {
-        const tx = i === 0 ? 110 : PW - 110
-        const c = w.spawn('cantor', e.x, e.y, { mover: new HoverMover(tx, 120, 1.5, 9) })
+        const tx = i === 0 ? PW * 0.18 : PW * 0.82
+        const c = w.spawn('cantor', e.x, e.y, { mover: new HoverMover(tx, 102, 1.5, 9) })
         w.parts.spawn(P.Ring, c.x, c.y, 0, 0, 0.5, 10, 70, C.violet)
       }
       w.emit({ type: 'radio', who: 'CHOIR', text: 'SING WITH US.', tone: 'enemy' })
@@ -249,7 +251,7 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
     // debris rain: visible from the top, straight lines, shootable
     s.debT = (s.debT ?? 0.5) - dt
     if (s.debT <= 0) {
-      s.debT = rand(0.6, 1)
+      s.debT = rand(0.42, 0.7)
       const x = rand(30, PW - 30)
       if (Math.abs(x - w.player.x) > 40 || Math.random() < 0.4) w.spawn('m7_debris', x, -30, { mover: new LineMover(rand(-20, 20), rand(190, 250)) })
     }
@@ -270,7 +272,7 @@ function placePetals(e: Enemy, parts: Enemy[], t: number, speed: number) {
   const petals = parts.filter((p) => p.tag === 'petal')
   petals.forEach((p, i) => {
     const a = t * speed + (i / petals.length) * TAU
-    p.ox = Math.cos(a) * 86; p.oy = Math.sin(a) * 86
+    p.ox = Math.cos(a) * 86 * S; p.oy = Math.sin(a) * 86 * S
     p.x = e.x + p.ox; p.y = e.y + p.oy
     p.rot = a - Math.PI / 2
   })
@@ -282,7 +284,7 @@ function streams(w: World, e: Enemy) {
     for (let i = 0; i < 9; i++) {
       w.after(i * 0.09, () => {
         if (e.dead || e.s.dying) return
-        const b = w.fire(e.x + side * 30, e.y + 20, Math.PI / 2 + side * 0.95, 160, BulletKind.Wave, 11)
+        const b = w.fire(e.x + side * 30 * S, e.y + 20 * S, Math.PI / 2 + side * 0.95, 170, BulletKind.Wave, 11)
         if (b) b.curve = -side * 0.62
       })
     }
@@ -301,13 +303,13 @@ function rose(w: World, e: Enemy) {
     const b = w.fire(e.x, e.y, a, 125, BulletKind.Wave, 11)
     if (b) b.curve = turn * 0.18
   }
-  w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.35, 20, 90, C.violet)
+  w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.35, 20, 90 * S, C.violet)
   enemySfx(w, e.x, true)
 }
 
 /** Two beams sweeping inward from wide angles (the sweep also runs during the telegraph); they stop ~0.4 rad either side of straight down. */
 function scissors(w: World, e: Enemy) {
-  for (const side of [-1, 1]) w.laser(e.x, e.y + 20, Math.PI / 2 + side * 1.05, 900, 20, 1.1, 1.7, e, -side * 0.22)
+  for (const side of [-1, 1]) w.laser(e.x, e.y + 20 * S, Math.PI / 2 + side * 1.05, 1100, 23, 1.1, 1.7, e, -side * 0.22)
 }
 
 function startDying(e: Enemy, w: World) {
@@ -333,9 +335,9 @@ function dyingUpdate(e: Enemy, w: World, dt: number) {
   s.boomT = (s.boomT ?? 0) - dt
   if (s.boomT <= 0) {
     s.boomT = 0.3 - k * 0.2
-    const a = rand(0, TAU), r = rand(20, 90)
+    const a = rand(0, TAU), r = rand(20, 90) * S
     explode(w, e.x + Math.cos(a) * r, e.y + Math.sin(a) * r, k > 0.6 ? 'large' : 'medium', false, C.magenta)
-    w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.6, 30, 160 + k * 200, k > 0.5 ? C.white : C.violet)
+    w.parts.spawn(P.Ring, e.x, e.y, 0, 0, 0.6, 30, (160 + k * 200) * S, k > 0.5 ? C.white : C.violet)
   }
   // petals tear off one by one
   const petals = alive(w.bossParts, 'petal')
@@ -354,7 +356,7 @@ function dyingUpdate(e: Enemy, w: World, dt: number) {
         const k = (ww.time - t0) / 3.6
         ctx.save()
         ctx.filter = `brightness(${1.6 - k * 1.3}) saturate(${1 - k * 0.8})`
-        drawSprite(ctx, getSprite('m7_heart'), x + Math.sin(ww.time * 50) * 3 * (1 - k), y + k * 30, k * 0.4, 1 - k * 0.35, 1 - k * k, 0)
+        drawSprite(ctx, getSprite('m7_heart'), x + Math.sin(ww.time * 50) * 3 * (1 - k), y + k * 30, k * 0.4, (1 - k * 0.35) * S, 1 - k * k, 0)
         ctx.restore()
       },
     })
@@ -378,15 +380,15 @@ function drawChoir(ctx: CanvasRenderingContext2D, e: Enemy, w: World) {
   const tr = s.phase >= 2 ? (s.trans ?? 0) : 0
   const split = tr * tr * (3 - 2 * tr)
   const fall = s.fall ?? 0
-  const wy = (s.phase >= 2 ? WALL_Y : e.y) + split * 14 + fall * fall * 30
+  const wy = (s.phase >= 2 ? WALL_Y : e.y) + split * 14 * S + fall * fall * 30
   const wa = clamp(1 - fall / 3, 0, 1)
   if (wa > 0) {
     for (const side of [-1, 1]) {
       ctx.save()
       ctx.globalAlpha = wa
-      ctx.translate(PW / 2 + side * (150 + split * 190), wy)
+      ctx.translate(PW / 2 + side * (150 * S + split * 260), wy)
       ctx.rotate(side * (split * 0.06 + fall * 0.1))
-      drawSprite(ctx, getSprite(side < 0 ? 'm7_wall_l' : 'm7_wall_r'), 0, 0, 0, 1, wa, s.phase === 1 ? e.flash * 0.4 : 0)
+      drawSprite(ctx, getSprite(side < 0 ? 'm7_wall_l' : 'm7_wall_r'), 0, 0, 0, S, wa, s.phase === 1 ? e.flash * 0.4 : 0)
       ctx.restore()
     }
   }
@@ -394,26 +396,26 @@ function drawChoir(ctx: CanvasRenderingContext2D, e: Enemy, w: World) {
     // the heart glimpsed through the iris seam
     const k = 0.35 + 0.25 * Math.sin(w.time * 5)
     ctx.globalCompositeOperation = 'lighter'
-    const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 30)
+    const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 30 * S)
     g.addColorStop(0, `rgba(255,220,240,${k})`)
     g.addColorStop(1, 'rgba(196,155,255,0)')
     ctx.fillStyle = g
-    ctx.beginPath(); ctx.arc(e.x, e.y, 30, 0, TAU); ctx.fill()
+    ctx.beginPath(); ctx.arc(e.x, e.y, 30 * S, 0, TAU); ctx.fill()
     ctx.globalCompositeOperation = 'source-over'
     return
   }
   // heartbeat
   const beat = Math.max(0, Math.sin(w.time * (s.phase === 3 ? 9 : 6))) ** 4
-  const sc = 1 + beat * 0.05 - (s.dying ? (s.dieT ?? 0) * 0.04 : 0)
+  const sc = (1 + beat * 0.05 - (s.dying ? (s.dieT ?? 0) * 0.04 : 0)) * S
   drawSprite(ctx, getSprite('m7_heart'), e.x, e.y, 0, sc, 1, e.flash)
   ctx.globalCompositeOperation = 'lighter'
-  const r = 14 + beat * 8 + (s.dying ? s.dieT * 10 : 0)
-  const g = ctx.createRadialGradient(e.x, e.y + 6, 0, e.x, e.y + 6, r)
+  const r = (14 + beat * 8 + (s.dying ? s.dieT * 10 : 0)) * S
+  const g = ctx.createRadialGradient(e.x, e.y + 6 * S, 0, e.x, e.y + 6 * S, r)
   g.addColorStop(0, 'rgba(255,255,255,0.95)')
   g.addColorStop(0.35, 'rgba(210,170,255,0.7)')
   g.addColorStop(1, 'rgba(196,155,255,0)')
   ctx.fillStyle = g
-  ctx.beginPath(); ctx.arc(e.x, e.y + 6, r, 0, TAU); ctx.fill()
+  ctx.beginPath(); ctx.arc(e.x, e.y + 6 * S, r, 0, TAU); ctx.fill()
   ctx.globalCompositeOperation = 'source-over'
 }
 

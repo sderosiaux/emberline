@@ -75,19 +75,26 @@ export function dropDebris(w: World, x: number, y: number, size: 'm6_debris' | '
  * clamshell opens on a spinal beam. Break the bow and the bridge itself is
  * exposed for the last stand. It sheds hull plates as debris the whole time.
  */
-const ROOT_Y = 232
+const ROOT_Y = 196
+/**
+ * Boss scale for the wide field. Smaller than the 1.3 used elsewhere on purpose: the hull is
+ * ~80% of the field's height already, and the bow needs a band of free space under it to fight in.
+ */
+const S = 0.85
 
 type Base = { bx: number; by: number }
 
 bossDef({
-  id: 'm6_revenant', hp: 8500, r: 36, sprite: 'm6_rev_hull', explode: 'large', score: 30000,
+  id: 'm6_revenant', hp: 3200, r: 31, sprite: 'm6_rev_hull', explode: 'large', score: 30000,
   update(e, w, dt) { revenantUpdate(e, w, dt) },
   drawBody(ctx, e, w) {
     const list = e.s.list ?? 0
     ctx.save()
     ctx.translate(e.x, e.y)
     ctx.rotate(list)
-    drawSprite(ctx, getSprite('m6_rev_spars'), 0, -80, 0, 1, 1, 0)
+    // the spars are scenery hanging off the keel: kept at full size so they span the wide field
+    drawSprite(ctx, getSprite('m6_rev_spars'), 0, -80 * S, 0, 1, 1, 0)
+    ctx.scale(S, S)
     drawSprite(ctx, getSprite('m6_rev_hull'), 0, 20, 0, 1, 1, e.flash)
     // bridge eye: dark while armoured, burning when exposed
     const open = e.armor > 0
@@ -104,23 +111,23 @@ bossDef({
 })
 
 bossDef({
-  id: 'm6_rev_engine', hp: 2600, r: 26, sprite: 'm6_rev_engine', explode: 'large', score: 4000,
+  id: 'm6_rev_engine', hp: 1800, r: 22, scale: S, sprite: 'm6_rev_engine', explode: 'large', score: 4000,
   update(e, w) {
     if (e.parent!.s.intro || e.parent!.s.dying) return
-    if (Math.random() < 0.7) w.parts.spawn(P.Smoke, e.x + rand(-8, 8), e.y - 34, rand(-10, 10), -110, 0.45, 6, 16, C.violet, 0.5)
+    if (Math.random() < 0.7) w.parts.spawn(P.Smoke, e.x + rand(-8, 8), e.y - 34 * S, rand(-10, 10), -110, 0.45, 6, 16, C.violet, 0.5)
     if (!canFire(w, e)) return
     e.s.t = (e.s.t ?? (e.ox < 0 ? 1.2 : 3.2)) - w.frameDt * w.diff.fireRate
     if (e.s.t <= 0) {
       e.s.t = 3.4
       // stern flak: slow heavy orbs raining down with wide gaps
-      fan(w, e.x, e.y + 30, Math.PI / 2 + (e.ox < 0 ? 0.25 : -0.25), 7, 1.5, 125, BulletKind.Big, 14)
+      fan(w, e.x, e.y + 30 * S, Math.PI / 2 + (e.ox < 0 ? 0.3 : -0.3), 9, 1.8, 130, BulletKind.Big, 14)
     }
   },
   onDeath(e, w) { partDown(w, e) },
 })
 
 bossDef({
-  id: 'm6_rev_missile', hp: 2000, r: 24, sprite: 'm6_rev_missile', explode: 'large', score: 3000,
+  id: 'm6_rev_missile', hp: 1400, r: 20, scale: S, sprite: 'm6_rev_missile', explode: 'large', score: 3000,
   update(e, w) {
     const root = e.parent!
     if (root.s.intro || root.s.dying) return
@@ -128,7 +135,7 @@ bossDef({
     if (e.s.t <= 0) {
       e.s.t = root.s.phase === 3 ? 4.2 : 5.6
       const side = e.ox < 0 ? -1 : 1
-      for (let i = 0; i < 4; i++) w.after(i * 0.16, () => { if (!e.dead) missile(w, e.x + (i - 1.5) * 9, e.y, -Math.PI / 2 + side * (0.5 + i * 0.25), 150, 1.6, 10) })
+      for (let i = 0; i < 4; i++) w.after(i * 0.16, () => { if (!e.dead) missile(w, e.x + (i - 1.5) * 9 * S, e.y, -Math.PI / 2 + side * (0.5 + i * 0.25), 150, 1.6, 10) })
     }
   },
   onDeath(e, w) { partDown(w, e); dropDebris(w, e.x, e.y, 'm6_debris_s') },
@@ -136,7 +143,7 @@ bossDef({
 
 /** Stitched-on armour plates: point-defence nests that fall off as debris. */
 bossDef({
-  id: 'm6_rev_plate', hp: 900, r: 26, sprite: 'm6_rev_plate', explode: 'medium', score: 2000,
+  id: 'm6_rev_plate', hp: 700, r: 22, scale: S, sprite: 'm6_rev_plate', explode: 'medium', score: 2000,
   update(e, w) {
     const root = e.parent!
     if (root.s.intro || root.s.dying || !canFire(w, e)) return
@@ -151,7 +158,7 @@ bossDef({
 })
 
 bossDef({
-  id: 'm6_rev_turret', hp: 900, r: 17, sprite: 'm6_turret', explode: 'medium', score: 1500,
+  id: 'm6_rev_turret', hp: 700, r: 15, scale: S, sprite: 'm6_turret', explode: 'medium', score: 1500,
   update(e, w) {
     const root = e.parent!
     const want = Math.atan2(w.player.y - e.y, w.player.x - e.x)
@@ -164,27 +171,27 @@ bossDef({
     }
     if (e.s.burst > 0) {
       e.s.bt -= w.frameDt
-      if (e.s.bt <= 0) { e.s.burst--; e.s.bt = 0.14; w.fire(e.x + Math.cos(want) * 16, e.y + Math.sin(want) * 16, want, 225, BulletKind.Needle, 11) }
+      if (e.s.bt <= 0) { e.s.burst--; e.s.bt = 0.14; w.fire(e.x + Math.cos(want) * 16 * S, e.y + Math.sin(want) * 16 * S, want, 225, BulletKind.Needle, 11) }
     }
   },
   drawBody(ctx, e) {
-    drawSprite(ctx, getSprite('m6_turret'), e.x, e.y, e.rot, 1, 1, e.flash)
-    drawSprite(ctx, getSprite('m6_barrel'), e.x, e.y, (e.s.aim ?? Math.PI / 2) - Math.PI / 2, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m6_turret'), e.x, e.y, e.rot, S, 1, e.flash)
+    drawSprite(ctx, getSprite('m6_barrel'), e.x, e.y, (e.s.aim ?? Math.PI / 2) - Math.PI / 2, S, 1, e.flash)
   },
   onDeath(e, w) { partDown(w, e, 'medium') },
 })
 
 bossDef({
-  id: 'm6_rev_bow', hp: 5000, r: 34, sprite: 'm6_rev_bow', explode: 'large', score: 6000,
+  id: 'm6_rev_bow', hp: 2200, r: 29, sprite: 'm6_rev_bow', explode: 'large', score: 6000,
   update(e, w) { bowUpdate(e, w) },
   drawBody(ctx, e, w) {
-    drawSprite(ctx, getSprite('m6_rev_bow'), e.x, e.y, e.rot, 1, 1, e.flash)
+    drawSprite(ctx, getSprite('m6_rev_bow'), e.x, e.y, e.rot, S, 1, e.flash)
     const open = e.armor > 0
     if (!open) return
     // clamshell open: molten slit down the spine, muzzle glow while charging
     const charge = e.s.charge ?? 0
     ctx.save()
-    ctx.translate(e.x, e.y); ctx.rotate(e.rot)
+    ctx.translate(e.x, e.y); ctx.rotate(e.rot); ctx.scale(S, S)
     ctx.globalCompositeOperation = 'lighter'
     ctx.strokeStyle = `rgba(255,46,136,${0.6 + 0.3 * Math.sin(w.time * 12)})`
     ctx.lineWidth = 5
@@ -201,7 +208,7 @@ bossDef({
   },
   onDeath(e, w) {
     partDown(w, e)
-    for (let i = 0; i < 2; i++) dropDebris(w, e.x + rand(-30, 30), e.y, 'm6_debris')
+    for (let i = 0; i < 2; i++) dropDebris(w, e.x + rand(-30, 30) * S, e.y, 'm6_debris')
   },
 })
 
@@ -213,7 +220,7 @@ function bowUpdate(e: Enemy, w: World) {
   if (e.s.state === 1) {
     // charging the beam
     e.s.charge = Math.min(1, (e.s.charge ?? 0) + dt / 1.3)
-    if (Math.random() < 0.6) w.parts.spawn(P.Glow, e.x + rand(-40, 40), e.y + 40 + rand(-30, 30), 0, 0, 0.25, 6, 1, C.magenta)
+    if (Math.random() < 0.6) w.parts.spawn(P.Glow, e.x + rand(-40, 40) * S, e.y + (40 + rand(-30, 30)) * S, 0, 0, 0.25, 6, 1, C.magenta)
     return
   }
   e.s.charge = Math.max(0, (e.s.charge ?? 0) - dt * 2)
@@ -221,7 +228,7 @@ function bowUpdate(e: Enemy, w: World) {
     e.s.fanT = (e.s.fanT ?? 1) - dt * w.diff.fireRate
     if (e.s.fanT <= 0 && canFire(w, e)) {
       e.s.fanT = 1.3
-      fan(w, e.x, e.y + 44, Math.PI / 2 + Math.sin(w.time) * 0.3, 11, 1.8, 150, BulletKind.Big, 14)
+      fan(w, e.x, e.y + 44 * S, Math.PI / 2 + Math.sin(w.time) * 0.3, 13, 2.1, 150, BulletKind.Big, 14)
     }
     return
   }
@@ -229,10 +236,10 @@ function bowUpdate(e: Enemy, w: World) {
   e.s.cyc = 6.2
   e.s.state = 1
   e.s.charge = 0
-  const mx = e.x - Math.sin(e.rot) * 44, my = e.y + Math.cos(e.rot) * 44
+  const mx = e.x - Math.sin(e.rot) * 44 * S, my = e.y + Math.cos(e.rot) * 44 * S
   const ang = Math.atan2(w.player.y - my, w.player.x - mx)
   const sweep = (w.player.x > mx ? 1 : -1) * -0.1
-  w.laser(mx, my, ang, 900, 34, 1.3, 1.7, e, sweep)
+  w.laser(mx, my, ang, 1100, 34, 1.3, 1.7, e, sweep)
   if (!e.s.warned) w.emit({ type: 'radio', who: 'KESTREL', text: 'Bow is glowing. Beam!' })
   e.s.warned = 1
   w.after(1.3, () => {
@@ -265,7 +272,7 @@ function revenantUpdate(e: Enemy, w: World, dt: number) {
 
   if (s.intro) {
     e.y += (ROOT_Y - e.y) * Math.min(1, dt * 0.7)
-    if (Math.random() < 0.8) w.parts.spawn(P.Spark, e.x + rand(-150, 150), e.y + rand(-200, 250), rand(-80, 80), rand(-80, 80), 0.4, 2, 0.5, C.orange, 2)
+    if (Math.random() < 0.8) w.parts.spawn(P.Spark, e.x + rand(-150, 150) * S, e.y + rand(-200, 250) * S, rand(-80, 80), rand(-80, 80), 0.4, 2, 0.5, C.orange, 2)
     if (Math.abs(e.y - ROOT_Y) < 4) { s.intro = 0; w.emit({ type: 'radio', who: 'CHOIR', text: 'WE WORE YOUR DEAD LIKE ARMOUR. NOW WE WEAR THEIR FLEET.', tone: 'enemy' }) }
     return
   }
@@ -293,17 +300,17 @@ function revenantUpdate(e: Enemy, w: World, dt: number) {
 
   // movement: engines give it a wide aggressive swing; without them it drifts and lists
   if (s.phase === 1) {
-    const tx = PW / 2 + Math.sin(s.time * 0.42) * 75
-    e.x += clamp(tx - e.x, -40 * dt, 40 * dt)
+    const tx = PW / 2 + Math.sin(s.time * 0.42) * 112
+    e.x += clamp(tx - e.x, -60 * dt, 60 * dt)
   } else {
     s.list = (s.list ?? 0) + (0.13 - (s.list ?? 0)) * Math.min(1, dt * 0.4)
-    const tx = PW / 2 + 20 + Math.sin(s.time * 0.2) * 30
-    e.x += clamp(tx - e.x, -14 * dt, 14 * dt)
-    const ty = ROOT_Y + 14
+    const tx = PW / 2 + 30 + Math.sin(s.time * 0.2) * 45
+    e.x += clamp(tx - e.x, -20 * dt, 20 * dt)
+    const ty = ROOT_Y + 12
     e.y += clamp(ty - e.y, -8 * dt, 8 * dt)
     // smoke from the dead stern
-    if (Math.random() < 0.5) w.parts.spawn(P.Smoke, e.x + rand(-80, 80), e.y - 190 + rand(-20, 20), rand(-10, 10), -30, 1.6, 10, 30, C.smokeDark, 0.4)
-    if (Math.random() < 0.2) w.parts.spawn(P.Fire, e.x + rand(-70, 70), e.y - 180, 0, -40, 0.5, 6, 14, 0, 1)
+    if (Math.random() < 0.5) w.parts.spawn(P.Smoke, e.x + rand(-80, 80) * S, e.y + (-190 + rand(-20, 20)) * S, rand(-10, 10), -30, 1.6, 10, 30, C.smokeDark, 0.4)
+    if (Math.random() < 0.2) w.parts.spawn(P.Fire, e.x + rand(-70, 70) * S, e.y - 180 * S, 0, -40, 0.5, 6, 14, 0, 1)
   }
 
   // shed hull as the whole machine takes damage
@@ -315,7 +322,7 @@ function revenantUpdate(e: Enemy, w: World, dt: number) {
     s.shed -= 0.07
     const n = s.phase === 3 ? 3 : 2
     for (let i = 0; i < n; i++) {
-      const hx = rand(-110, 110), hy = rand(-120, 240)
+      const hx = rand(-110, 110) * S, hy = rand(-120, 240) * S
       const x = e.x + hx * cs - hy * sn, y = e.y + hx * sn + hy * cs
       explode(w, x, y, 'medium')
       dropDebris(w, x, y, i === 0 ? 'm6_debris' : 'm6_debris_s')
@@ -355,7 +362,7 @@ function startDeath(e: Enemy, w: World) {
   for (const [bx, by, t] of pts) {
     w.after(t, () => {
       const l = e.s.list ?? 0
-      const x = e.x + bx * Math.cos(l) - by * Math.sin(l), y = e.y + bx * Math.sin(l) + by * Math.cos(l)
+      const x = e.x + (bx * Math.cos(l) - by * Math.sin(l)) * S, y = e.y + (bx * Math.sin(l) + by * Math.cos(l)) * S
       explode(w, x, y, 'large')
       w.addShake(10)
       if (Math.random() < 0.5) dropDebris(w, x, y, 'm6_debris_s', rand(80, 140))
@@ -371,7 +378,7 @@ function startDeath(e: Enemy, w: World) {
     spawnFx(w, {
       update(ww, _dt, fx) {
         const k = ww.time - t0
-        if (Math.random() < 0.6) ww.parts.spawn(P.Fire, x + rand(-100, 100), y + k * 22 + rand(-150, 250), rand(-20, 20), -30, 0.6, 8, 20, 0, 1)
+        if (Math.random() < 0.6) ww.parts.spawn(P.Fire, x + rand(-100, 100) * S, y + k * 22 + rand(-150, 250) * S, rand(-20, 20), -30, 0.6, 8, 20, 0, 1)
         if (k > 6) fx.gone = true
       },
       draw(ctx, ww) {
@@ -384,6 +391,7 @@ function startDeath(e: Enemy, w: World) {
           const dx = half ? 30 * k : -34 * k, dy = half ? 120 * k : 40 * k
           ctx.translate(x + dx, y + dy)
           ctx.rotate(list + (half ? 0.25 : -0.18) * k)
+          ctx.scale(S, S)
           ctx.beginPath()
           if (half) ctx.rect(-200, 20, 400, 400); else ctx.rect(-200, -300, 400, 320)
           ctx.clip()
@@ -398,12 +406,13 @@ function startDeath(e: Enemy, w: World) {
 }
 
 export function spawnRevenant(w: World) {
-  const e = w.spawn('m6_revenant', PW / 2, -560)
+  const e = w.spawn('m6_revenant', PW / 2, -480)
   e.s.intro = 1
   e.s.phase = 1
   e.armor = 0
   const parts: Enemy[] = []
-  const add = (id: string, bx: number, by: number, tag: string) => {
+  const add = (id: string, bx0: number, by0: number, tag: string) => {
+    const bx = bx0 * S, by = by0 * S
     const p = w.spawn(id, e.x + bx, e.y + by, { parent: e, ox: bx, oy: by, tag, data: { bx, by } satisfies Base })
     parts.push(p)
     return p

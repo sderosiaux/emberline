@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer'
-import { drawHud, drawHudOverlays } from './render/hud'
+import { drawHud, drawHudOverlays, drawHudIdle } from './render/hud'
 import { input } from './core/input'
 import { audio } from './audio/audio'
 import { Session, type MissionResult } from './game/session'
@@ -14,7 +14,6 @@ import { hangarScreen } from './ui/hangar'
 import { Attract } from './ui/attract'
 import { SCREEN_W, SCREEN_H } from './game/consts'
 import { T } from './ui/theme'
-import { drawFieldFrame } from './ui/attract'
 import { installDebug } from './debug'
 
 export interface Screen {
@@ -329,7 +328,7 @@ export class App {
       const h = r.beginHud()
       h.fillStyle = T.paper
       h.fillRect(0, 0, SCREEN_W, SCREEN_H)
-      if (mode === 'attract') drawFieldFrame(h)
+      if (mode === 'attract') drawHudIdle(h)
     }
     if (mode === 'attract' && this.attract) this.attract.draw(r.begin())
   }
