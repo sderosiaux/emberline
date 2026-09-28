@@ -1,6 +1,8 @@
 // Sustained sounds driven by the game each frame (beam weapon, charge-up, low-hull alarm).
+// Normally a looping sample (pitch = playback rate); the oscillator builders are the fallback.
 
 import { type Ctx, holdAt } from './core'
+import type { LoopSample } from './samples'
 import { osc } from './synth'
 import type { LoopName } from './types'
 
@@ -104,10 +106,23 @@ function alarm(ctx: Ctx, _t: number, pitch: number): Built {
 
 const BUILDERS: Record<LoopName, (ctx: Ctx, t: number, pitch: number) => Built> = { beam, charge, alarm }
 
-export function startLoop(ctx: Ctx, dest: AudioNode, name: LoopName, vol: number, pitch0: number): LoopVoice {
+/** The file plays its intro once (e.g. the charge rise), then cycles loopStart..loopEnd. */
+function fromSample(ctx: Ctx, s: LoopSample, pitch: number): Built {
+  const src = ctx.createBufferSource()
+  src.buffer = s.buf
+  src.loop = true
+  src.loopStart = s.loopStart
+  src.loopEnd = s.loopEnd
+  src.playbackRate.value = pitch
+  const out = ctx.createGain()
+  src.connect(out)
+  return { out, level: s.gain, sources: [src], retune: (p, at) => src.playbackRate.setTargetAtTime(p, at, 0.04) }
+}
+
+export function startLoop(ctx: Ctx, dest: AudioNode, name: LoopName, vol: number, pitch0: number, sample?: LoopSample | null): LoopVoice {
   let pitch = pitch0
   const t = ctx.currentTime
-  const b = BUILDERS[name](ctx, t, pitch0)
+  const b = sample ? fromSample(ctx, sample, pitch0) : BUILDERS[name](ctx, t, pitch0)
   const g = b.out.gain
   let v = vol
   g.setValueAtTime(0, t)

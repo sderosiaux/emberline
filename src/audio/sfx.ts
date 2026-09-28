@@ -1,10 +1,13 @@
-// Sound effect recipes. Each returns its duration so the voice manager knows when to recycle it.
+// Sound effect definitions: voice limits, routing, and the synthesized recipe for each sound.
+// Samples from public/sfx (see samples.ts) are what normally plays; a recipe is the fallback when a
+// sample couldn't load. Each recipe returns its duration so the voice manager knows when to recycle it.
 // Loudness targets (pre-master): rapid-fire weapons ~0.1, hits ~0.05, explosions 0.3-0.6.
 // Player sounds are square/saw/noise based; everything the Choir fires is a formant "vowel" voice.
 
 import { type Mixer, mtof } from './core'
 import { playNote, playPad, type SynthPreset } from './instruments'
 import { type Dst, fm, formant, noise, tone } from './synth'
+import type { Sample } from './samples'
 import type { SfxName } from './types'
 
 export interface SfxCtx extends Dst {
@@ -27,8 +30,10 @@ export interface SfxDef {
   wet?: number
   /** plays through the UI bus: ignores pause */
   ui?: boolean
-  /** level trim applied on the voice gain */
+  /** level trim applied on the voice gain (synth recipe only; samples carry their calibrated gain) */
   lvl?: number
+  /** maps the requested pitch before playing (e.g. snap to a scale) */
+  tune?: (p: number) => number
   fn: (c: SfxCtx) => number
 }
 
@@ -224,8 +229,8 @@ export const SFX: Record<SfxName, SfxDef> = {
   } },
 
   // ------------------------------------------------ pickups
-  pickup_credit: { lvl: 1.6, cap: 4, gap: 0.03, prio: 2, fn: (c) => {
-    const p = pentPitch(c.p)
+  pickup_credit: { lvl: 1.6, cap: 4, gap: 0.03, prio: 2, tune: pentPitch, fn: (c) => {
+    const { p } = c
     tone(c, c.t, { w: 'square', f: 988 * p, dur: 0.045, vol: 0.06, flt: { type: 'lowpass', f: 5000 } })
     tone(c, c.t + 0.045, { w: 'square', f: 1319 * p, dur: 0.11, vol: 0.06, flt: { type: 'lowpass', f: 5000 } })
     return 0.16
@@ -424,14 +429,14 @@ export interface Spawned {
   gain: GainNode
   tail: AudioNode
   dur: number
+  src?: AudioScheduledSourceNode
 }
 
-/** Build one sfx voice into the mixer: gain (vol) -> optional panner -> sfx/ui bus (+ reverb send). */
-export function spawnSfx(mx: Mixer, name: SfxName, t: number, vol: number, pitch: number, pan: number, r: () => number): Spawned {
+/** Voice routing shared by samples and recipes: gain (vol) -> optional panner -> sfx/ui bus (+ reverb send). */
+function route(mx: Mixer, def: SfxDef, level: number, pan: number): { gain: GainNode; tail: AudioNode } {
   const { ctx } = mx
-  const def = SFX[name]
   const gain = ctx.createGain()
-  gain.gain.value = vol * (def.lvl ?? 1)
+  gain.gain.value = level
   let tail: AudioNode = gain
   if (pan !== 0) {
     const p = ctx.createStereoPanner()
@@ -445,6 +450,26 @@ export function spawnSfx(mx: Mixer, name: SfxName, t: number, vol: number, pitch
     s.gain.value = def.wet
     tail.connect(s).connect(mx.sfxWetIn)
   }
-  const dur = def.fn({ ctx, out: gain, t, p: pitch, r })
+  return { gain, tail }
+}
+
+/** Build one synthesized sfx voice (fallback path). */
+export function spawnSfx(mx: Mixer, name: SfxName, t: number, vol: number, pitch: number, pan: number, r: () => number): Spawned {
+  const def = SFX[name]
+  const { gain, tail } = route(mx, def, vol * (def.lvl ?? 1), pan)
+  const dur = def.fn({ ctx: mx.ctx, out: gain, t, p: def.tune ? def.tune(pitch) : pitch, r })
   return { gain, tail, dur }
+}
+
+/** Build one sample voice: pitch is playback rate, so it also scales the duration. */
+export function spawnSample(mx: Mixer, name: SfxName, s: Sample, t: number, vol: number, pitch: number, pan: number): Spawned {
+  const def = SFX[name]
+  const { gain, tail } = route(mx, def, vol * s.gain, pan)
+  const rate = Math.max(0.25, Math.min(4, def.tune ? def.tune(pitch) : pitch))
+  const src = mx.ctx.createBufferSource()
+  src.buffer = s.buf
+  src.playbackRate.value = rate
+  src.connect(gain)
+  src.start(t)
+  return { gain, tail, dur: s.buf.duration / rate, src }
 }

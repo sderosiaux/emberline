@@ -1,8 +1,9 @@
 // Renders every sfx, loop and track offline through the real master chain and reports levels.
-// Query params: ?only=sfx,bursts,loops,tracks,layers,perf,dump  ?secs=N (track length)  ?track=id (single track)
+// Query params: ?only=sfx,samples,bursts,loops,tracks,layers,perf,dump  ?secs=N (track length)  ?track=id (single track)
 // perf = offline render speed (CPU proxy); dump = composed chords/bass/melody per bar as text.
 
-import { type Stats, analyze, renderLoop, renderSfx, renderSfxBurst, renderTrack } from '../src/audio/offline'
+import { type Stats, analyze, renderLoop, renderSample, renderSfx, renderSfxBurst, renderTrack } from '../src/audio/offline'
+import { SampleBank } from '../src/audio/samples'
 import { SFX } from '../src/audio/sfx'
 import { TRACKS } from '../src/audio/tracks'
 import { compose } from '../src/audio/composer'
@@ -16,7 +17,7 @@ interface Row extends Stats {
 }
 
 const q = new URLSearchParams(location.search)
-const only = new Set((q.get('only') ?? 'sfx,bursts,loops,tracks').split(','))
+const only = new Set((q.get('only') ?? 'sfx,samples,bursts,loops,tracks').split(','))
 const secs = Number(q.get('secs') ?? 60)
 const trackIds = q.get('track') ? [q.get('track') as TrackId] : (Object.keys(TRACKS) as TrackId[])
 const rows: Row[] = []
@@ -46,6 +47,22 @@ async function main(): Promise<void> {
       add(`sfx:${name}`, analyze(await renderSfx(name)))
     }
     for (const p of [1.5, 2]) add(`sfx:pickup_credit@${p}`, analyze(await renderSfx('pickup_credit', { pitch: p })))
+  }
+  if (only.has('samples')) {
+    // every recorded variant (and looping sample) through the real master chain, at unit game volume
+    const bank = new SampleBank(new OfflineAudioContext(1, 1, 44100))
+    await bank.ready
+    for (const name of Object.keys(SFX) as SfxName[]) {
+      status.textContent = `sample ${name}`
+      const vs = bank.variants(name)
+      if (!vs.length) add(`sample:${name} MISSING`, { peak: 0, rms: 0, rmsMax: 0, nan: false, hot: 0 })
+      for (const [i, v] of vs.entries()) add(`sample:${name}#${i + 1}`, analyze(await renderSample(name, v, {}, v.buf.duration + 0.5)))
+    }
+    for (const n of ['beam', 'charge', 'alarm'] as LoopName[]) {
+      const s = bank.loop(n)
+      if (!s) add(`sample-loop:${n} MISSING`, { peak: 0, rms: 0, rmsMax: 0, nan: false, hot: 0 })
+      else for (const p of [1, 1.8]) add(`sample-loop:${n}@${p}`, analyze(await renderLoop(n, 3, p, s)))
+    }
   }
   if (only.has('bursts')) {
     const bursts: [SfxName, number, number][] = [

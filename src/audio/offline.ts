@@ -4,7 +4,8 @@ import { MUSIC_TRIM, createMixer, makeRng } from './core'
 import { type Layer, compose } from './composer'
 import { startLoop } from './loops'
 import { SongPlayer } from './player'
-import { spawnSfx } from './sfx'
+import type { LoopSample, Sample } from './samples'
+import { spawnSample, spawnSfx } from './sfx'
 import { TRACKS } from './tracks'
 import type { LoopName, SfxName, SfxOpts, TrackId } from './types'
 
@@ -21,6 +22,14 @@ export async function renderSfx(name: SfxName, opts: SfxOpts = {}, seconds = 5.5
   return ctx.startRendering()
 }
 
+/** Same as renderSfx but plays a recorded variant instead of the synthesized recipe. */
+export async function renderSample(name: SfxName, sample: Sample, opts: SfxOpts = {}, seconds = 5.5): Promise<AudioBuffer> {
+  const ctx = new OfflineAudioContext(2, Math.ceil(SR * (seconds + SETTLE)), SR)
+  const mx = createMixer(ctx, ctx.destination)
+  spawnSample(mx, name, sample, SETTLE, opts.vol ?? 1, opts.pitch ?? 1, opts.pan ?? 0)
+  return ctx.startRendering()
+}
+
 /** Fire `count` triggers of one sfx `interval` apart (stress: stacking, no voice limiter involved). */
 export async function renderSfxBurst(name: SfxName, count: number, interval: number): Promise<AudioBuffer> {
   const seconds = count * interval + 4 + SETTLE
@@ -31,10 +40,10 @@ export async function renderSfxBurst(name: SfxName, count: number, interval: num
   return ctx.startRendering()
 }
 
-export async function renderLoop(name: LoopName, seconds = 3, pitch = 1): Promise<AudioBuffer> {
+export async function renderLoop(name: LoopName, seconds = 3, pitch = 1, sample?: LoopSample | null): Promise<AudioBuffer> {
   const ctx = new OfflineAudioContext(2, Math.ceil(SR * seconds), SR)
   const mx = createMixer(ctx, ctx.destination)
-  startLoop(ctx, mx.sfxIn, name, 1, pitch)
+  startLoop(ctx, mx.sfxIn, name, 1, pitch, sample)
   return ctx.startRendering()
 }
 

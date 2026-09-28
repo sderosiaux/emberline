@@ -1,10 +1,12 @@
-// Public audio facade for the game. Everything is synthesized; nothing here allocates until unlock().
+// Public audio facade for the game. Nothing here allocates until unlock(). Sound effects are samples
+// (samples.ts) with the synthesized recipes as fallback; music is recorded (stream.ts) with the composer as fallback.
 
 import { MASTER_TRIM, MUSIC_TRIM, type Mixer, createMixer, glideAll, holdAt } from './core'
 import { type Arrangement, compose } from './composer'
 import { type LoopVoice, startLoop } from './loops'
 import { SongPlayer } from './player'
-import { SFX, spawnSfx } from './sfx'
+import { SampleBank } from './samples'
+import { SFX, spawnSample, spawnSfx } from './sfx'
 import { TRACKS } from './tracks'
 import { StreamMusic } from './stream'
 import type { Intensity, LoopHandle, LoopName, SfxName, SfxOpts, TrackId } from './types'
@@ -24,6 +26,7 @@ interface Voice {
   ui: boolean
   gain: GainNode
   tail: AudioNode
+  src?: AudioScheduledSourceNode
 }
 
 interface TrackInst {
@@ -42,6 +45,7 @@ class Engine {
   private mx: Mixer | null = null
   /** Recorded soundtrack; the procedural composer is only a fallback when a file can't load. */
   private stream: StreamMusic | null = null
+  private bank: SampleBank | null = null
   private vols = { master: 1, sfx: 1, music: 1 }
   private paused = false
   private voices: Voice[] = []
@@ -63,6 +67,7 @@ class Engine {
       this.applyVolumes()
       if (this.paused) this.applyPause(true)
       this.stream = new StreamMusic(this.ctx as AudioContext, this.mx.musicIn)
+      this.bank = new SampleBank(this.ctx)
       setInterval(() => this.tick(), TICK_MS)
       if (this.currentId) { const id = this.currentId; this.currentId = null; this.play(id, 0.5) }
     }
@@ -160,8 +165,10 @@ class Engine {
     let pitch = opts?.pitch ?? 1
     if (def.jitter) pitch *= 1 + (Math.random() * 2 - 1) * def.jitter
     const vol = Math.max(0, Math.min(1.5, opts?.vol ?? 1))
-    const s = spawnSfx(mx, name, now + 0.005, vol, pitch, opts?.pan ?? 0, Math.random)
-    this.voices.push({ name, prio: def.prio, start: now, end: now + s.dur + 0.1, ui: !!def.ui, gain: s.gain, tail: s.tail })
+    const pan = opts?.pan ?? 0
+    const sample = this.bank?.pick(name, Math.random)
+    const s = sample ? spawnSample(mx, name, sample, now + 0.005, vol, pitch, pan) : spawnSfx(mx, name, now + 0.005, vol, pitch, pan, Math.random)
+    this.voices.push({ name, prio: def.prio, start: now, end: now + s.dur + 0.1, ui: !!def.ui, gain: s.gain, tail: s.tail, src: s.src })
   }
 
   private kill(v: Voice, now: number): void {
@@ -169,6 +176,7 @@ class Engine {
     if (i >= 0) this.voices.splice(i, 1)
     holdAt(v.gain.gain, now)
     v.gain.gain.setTargetAtTime(0, now, 0.012)
+    v.src?.stop(now + 0.1)
     setTimeout(() => v.tail.disconnect(), 150)
   }
 
@@ -187,7 +195,7 @@ class Engine {
     const list = this.loops.get(name) ?? []
     this.loops.set(name, list)
     if (list.length >= LOOP_CAP) list.shift()?.stop()
-    const v = startLoop(ctx, mx.sfxIn, name, clamp01(opts?.vol ?? 1), opts?.pitch ?? 1)
+    const v = startLoop(ctx, mx.sfxIn, name, clamp01(opts?.vol ?? 1), opts?.pitch ?? 1, this.bank?.loop(name))
     list.push(v)
     return {
       set: (p) => v.set(p.vol, p.pitch),

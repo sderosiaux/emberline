@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMBERLINE sfx lab</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --accent: #e0662b; --accent-soft: #fdeee6; --synth: #4a5bd4; --synth-soft: #eceefc; --ok: #2e7d4f; --radius: 10px;
+  }
+  * { box-sizing: border-box }
+  body { margin: 0; font: 14px/1.4 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink) }
+  header { position: sticky; top: 0; z-index: 1; padding: 14px 28px; border-bottom: 1px solid var(--line); background: var(--panel); display: flex; gap: 20px; align-items: center; flex-wrap: wrap }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .04em }
+  header .hint { color: var(--muted) }
+  header a { color: var(--accent) }
+  .ctl { display: flex; align-items: center; gap: 8px; color: var(--muted) }
+  .ctl input { width: 110px; accent-color: var(--accent) }
+  .ctl output { width: 38px; font-variant-numeric: tabular-nums; color: var(--ink) }
+  main { padding: 20px 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; align-items: start }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px }
+  .snd { display: grid; grid-template-columns: 170px 1fr; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line) }
+  .snd:first-of-type { border-top: 0 }
+  .name { font: 12.5px ui-monospace, monospace }
+  .name small { display: block; color: var(--muted); font: 11px system-ui, sans-serif }
+  .btns { display: flex; flex-wrap: wrap; gap: 5px }
+  button { font: inherit; font-size: 12.5px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 7px; padding: 4px 9px; cursor: pointer; transition: background .15s, border-color .15s, color .15s }
+  button:hover { border-color: var(--accent); background: var(--accent-soft) }
+  button.play { border-color: var(--accent); color: var(--accent); font-weight: 600 }
+  button.synth { color: var(--synth) }
+  button.synth:hover { border-color: var(--synth); background: var(--synth-soft) }
+  button.on { background: var(--accent); border-color: var(--accent); color: #fff }
+  button.missing { opacity: .45; cursor: not-allowed }
+  .status { color: var(--ok); font-variant-numeric: tabular-nums }
+</style>
+</head>
+<body>
+<header>
+  <h1>EMBERLINE · sfx lab</h1>
+  <span class="hint">Click anywhere to unlock audio. <b>▶</b> random variant (as the game plays it) · <b>v1…</b> a specific variant · <b>synth</b> the old fallback recipe.</span>
+  <span class="status" id="status">locked</span>
+  <label class="ctl">vol <input id="o-vol" type="range" min="0" max="1.5" step="0.05" value="1"><output id="o-vol-v">1</output></label>
+  <label class="ctl">pitch <input id="o-pitch" type="range" min="0.5" max="2" step="0.05" value="1"><output id="o-pitch-v">1</output></label>
+  <label class="ctl">pan <input id="o-pan" type="range" min="-1" max="1" step="0.05" value="0"><output id="o-pan-v">0</output></label>
+  <a href="./audio-lab.html">music &amp; mix lab →</a>
+</header>
+<main id="groups"></main>
+<script type="module" src="./sfx-lab.ts"></script>
+</body>
+</html>
