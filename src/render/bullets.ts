@@ -18,21 +18,46 @@ function make(w: number, h: number, rotate: boolean, paint: (c: CanvasRenderingC
   return { img, w, h, rotate }
 }
 
+/** Energy orb: dark rim (reads on bright ground) → deep magenta → hot pink → white-hot core, plus a specular glint. */
 function orb(c: CanvasRenderingContext2D, cx: number, cy: number, r: number, body = '#ff2e88', halo = 'rgba(255,46,136,0.35)') {
-  const g = c.createRadialGradient(cx, cy, 0, cx, cy, r * 2)
-  g.addColorStop(0, halo)
-  g.addColorStop(1, 'rgba(255,46,136,0)')
-  c.fillStyle = g
-  c.beginPath(); c.arc(cx, cy, r * 2, 0, Math.PI * 2); c.fill()
+  void halo
   c.fillStyle = '#2a0718'
-  c.beginPath(); c.arc(cx, cy, r + 1.2, 0, Math.PI * 2); c.fill()
-  c.fillStyle = body
+  c.beginPath(); c.arc(cx, cy, r + 1.3, 0, Math.PI * 2); c.fill()
+  const g = c.createRadialGradient(cx - r * 0.15, cy - r * 0.15, 0, cx, cy, r)
+  g.addColorStop(0, '#ffffff')
+  g.addColorStop(0.28, '#ffe0ef')
+  g.addColorStop(0.55, body === '#ff2e88' ? '#ff5aa8' : body)
+  g.addColorStop(0.82, '#e0147a')
+  g.addColorStop(1, '#8e0c4d')
+  c.fillStyle = g
   c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill()
-  c.fillStyle = '#fff4fa'
-  c.beginPath(); c.arc(cx, cy, r * 0.5, 0, Math.PI * 2); c.fill()
+  c.fillStyle = 'rgba(255,255,255,0.85)'
+  c.beginPath(); c.ellipse(cx - r * 0.35, cy - r * 0.4, r * 0.28, r * 0.16, -0.6, 0, Math.PI * 2); c.fill()
+}
+
+/** Additive pieces animated at draw time: a soft pulsing glow and a broken ring that spins. */
+export const bulletFx = { glow: null as HTMLCanvasElement | null, ring: null as HTMLCanvasElement | null }
+function initFx() {
+  const g = makeCanvas(64 * S, 64 * S)
+  const x = g.getContext('2d')!
+  const rg = x.createRadialGradient(32 * S, 32 * S, 0, 32 * S, 32 * S, 32 * S)
+  rg.addColorStop(0, 'rgba(255,90,170,0.9)'); rg.addColorStop(0.35, 'rgba(255,46,136,0.45)'); rg.addColorStop(1, 'rgba(255,46,136,0)')
+  x.fillStyle = rg; x.fillRect(0, 0, 64 * S, 64 * S)
+  bulletFx.glow = g
+  const r = makeCanvas(32 * S, 32 * S)
+  const y = r.getContext('2d')!
+  y.scale(S, S)
+  y.lineCap = 'round'
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2
+    y.strokeStyle = 'rgba(255,200,228,0.95)'; y.lineWidth = 1.6
+    y.beginPath(); y.arc(16, 16, 12, a, a + 1.1); y.stroke()
+  }
+  bulletFx.ring = r
 }
 
 export function initBulletTextures() {
+  initFx()
   tex.set(BulletKind.Orb, make(20, 20, false, (c) => orb(c, 10, 10, 4.6)))
   tex.set(BulletKind.Big, make(36, 36, false, (c) => orb(c, 18, 18, 8.5)))
   tex.set(BulletKind.Ring, make(20, 20, false, (c) => orb(c, 10, 10, 4.6, '#ff5aa5')))

@@ -130,10 +130,23 @@ export class HoverMover implements Mover {
 
 /** Ground objects: locked to terrain scroll, optional crawl along the ground. */
 export class GroundMover implements Mover {
+  private trail = 0
   constructor(private vx = 0, private vy = 0) {}
   update(e: Enemy, w: World, dt: number) {
     e.x += this.vx * dt
     e.y += (w.scroll + this.vy) * dt
+    if (this.vx === 0 && this.vy === 0) return
+    // vehicles face where they drive (sprites point down at rot 0) and leave tracks in the ground
+    const want = Math.atan2(this.vy, this.vx) - Math.PI / 2
+    e.rot += angleDiff(e.rot, want) * Math.min(1, dt * 8)
+    this.trail -= Math.hypot(this.vx, this.vy) * dt
+    if (this.trail <= 0) {
+      this.trail = 7
+      const px = Math.cos(e.rot), py = Math.sin(e.rot)   // sideways axis of the vehicle
+      const back = e.r * 0.7
+      const bx = e.x - Math.cos(e.rot + Math.PI / 2) * back, by = e.y - Math.sin(e.rot + Math.PI / 2) * back
+      for (const s of [-1, 1]) w.addTrack(bx + px * s * e.r * 0.55, by + py * s * e.r * 0.55, e.rot)
+    }
   }
 }
 

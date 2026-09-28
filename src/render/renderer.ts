@@ -1,11 +1,11 @@
 import type { World } from '../game/world'
 import type { Background } from './backgrounds'
-import { getSprite, drawSprite, drawShadow, glowTexture, hasSprite } from './sprites'
-import { bulletTex } from './bullets'
+import { getSprite, drawSprite, drawShadow, glowTexture, hasSprite, setSpriteTint } from './sprites'
+import { bulletTex, bulletFx } from './bullets'
 import { PW, PH, SCREEN_W, SCREEN_H, FIELD_W, ZOOM } from '../game/consts'
 import { Sunline, Aegis, Lantern, Halo } from '../game/weapons'
 import { specialFx } from '../game/specials'
-import { PickupKind } from '../game/entities'
+import { PickupKind, BulletKind } from '../game/entities'
 import type { Enemy } from '../game/entities'
 import { TAU } from '../core/math'
 import { T } from '../ui/theme'
@@ -102,6 +102,15 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
     c.drawImage(g, d.x - d.r, d.y - d.r, d.r * 2, d.r * 2)
   }
   c.globalAlpha = 1
+  // tread marks
+  if (w.tracks.length) {
+    c.fillStyle = 'rgb(35,24,16)'
+    for (const t of w.tracks) {
+      c.globalAlpha = 0.22 * Math.min(1, t.life / 2)
+      c.save(); c.translate(t.x, t.y); c.rotate(t.rot); c.fillRect(-2.5, -3, 5, 6); c.restore()
+    }
+    c.globalAlpha = 1
+  }
   // ground decor (below everything that moves)
   for (const d of w.decor) {
     if (d.above) continue
@@ -115,7 +124,18 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
   const air: Enemy[] = []
   for (const e of w.enemies) (e.layer === 'ground' ? ground : air).push(e)
   ground.sort((a, b) => (a.def.z ?? 0) - (b.def.z ?? 0))
+  // contact shadows first, so every unit sits *in* the ground rather than on top of it
+  const sh = glowTexture('rgba(10,6,4,0.75)', 64, 0.25)
+  for (const e of ground) {
+    if (e.hidden || e.visibleAlpha < 0.4 || e.bossPart) continue
+    const r = e.r * 1.45 * e.scale
+    c.globalAlpha = 0.5 * e.visibleAlpha
+    c.drawImage(sh, e.x - r + 3, e.y - r * 0.9 + 5, r * 2, r * 1.8)
+  }
+  c.globalAlpha = 1
+  setSpriteTint(w.ambient)
   for (const e of ground) drawEnemy(c, w, e)
+  setSpriteTint(null)
   for (const d of w.decor) if (d.above && hasSprite(d.sprite)) drawSprite(c, spr(d.sprite), d.x, d.y, d.rot, d.scale, d.alpha)
 
   // shadows of air units
@@ -449,22 +469,74 @@ function drawLasers(c: CanvasRenderingContext2D, w: World) {
   }
 }
 
+const ORBISH = new Set<BulletKind>([BulletKind.Orb, BulletKind.Big, BulletKind.Ring, BulletKind.Wave, BulletKind.Bomb, BulletKind.Mine])
+
 function drawBullets(c: CanvasRenderingContext2D, w: World) {
-  for (const b of w.bullets.items) {
+  const items = w.bullets.items
+  const glow = bulletFx.glow!, ring = bulletFx.ring!
+  const time = w.time
+  // 1) additive pass: pulsing glows under every energy shot, streaks behind fast ones
+  c.globalCompositeOperation = 'lighter'
+  for (let i = 0; i < items.length; i++) {
+    const b = items[i]
+    if (!b.active || b.kind === BulletKind.Missile) continue
+    const pulse = 1 + 0.18 * Math.sin(time * 13 + i * 1.7)
+    const rr = b.r * b.scale * 3.1 * pulse
+    c.globalAlpha = b.age < b.arm ? 0.25 : 0.5
+    c.drawImage(glow, b.x - rr, b.y - rr, rr * 2, rr * 2)
+    // additive light vanishes on sand and snow: a tinted normal-blend halo keeps the pulse visible there
+    c.globalCompositeOperation = 'source-over'
+    c.globalAlpha = 0.22
+    const hr = rr * 0.75
+    c.drawImage(glow, b.x - hr, b.y - hr, hr * 2, hr * 2)
+    c.globalCompositeOperation = 'lighter'
+    if (b.kind === BulletKind.Needle || b.kind === BulletKind.Shard) {
+      const sp = Math.hypot(b.vx, b.vy) || 1
+      const len = Math.min(34, sp * 0.06)
+      c.globalAlpha = 0.45
+      c.strokeStyle = '#ff5aa8'
+      c.lineWidth = b.r * 1.3
+      c.lineCap = 'round'
+      c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(b.x - (b.vx / sp) * len, b.y - (b.vy / sp) * len); c.stroke()
+    }
+  }
+  c.globalAlpha = 1
+  c.globalCompositeOperation = 'source-over'
+  // 2) bodies
+  for (let i = 0; i < items.length; i++) {
+    const b = items[i]
     if (!b.active) continue
     const t = bulletTex(b.kind)
-    const s = b.scale * (b.age < 0.08 ? 0.5 + b.age * 6 : 1)
+    const breathe = ORBISH.has(b.kind) ? 1 + 0.07 * Math.sin(time * 16 + i * 1.7) : 1
+    const s = b.scale * breathe * (b.age < 0.08 ? 0.5 + b.age * 6 : 1)
     const bw = t.w * s, bh = t.h * s
     if (b.arm > 0 && b.age < b.arm) c.globalAlpha = 0.5
     if (t.rotate) {
+      const a = b.kind === BulletKind.Shard ? b.age * 14 : Math.atan2(b.vy, b.vx) - Math.PI / 2
+      const cs = Math.cos(a), sn = Math.sin(a)
       c.save()
-      c.translate(b.x, b.y)
-      c.rotate(Math.atan2(b.vy, b.vx) - Math.PI / 2)
+      c.transform(cs, sn, -sn, cs, b.x, b.y)
       c.drawImage(t.img, -bw / 2, -bh / 2, bw, bh)
       c.restore()
     } else c.drawImage(t.img, b.x - bw / 2, b.y - bh / 2, bw, bh)
     c.globalAlpha = 1
   }
+  // 3) spinning energy ring on the big orbs only (small ones would just turn to mush)
+  c.globalCompositeOperation = 'lighter'
+  for (let i = 0; i < items.length; i++) {
+    const b = items[i]
+    if (!b.active || (b.kind !== BulletKind.Big && b.kind !== BulletKind.Wave && b.r * b.scale < 6)) continue
+    const rr = b.r * b.scale * 1.9
+    const a = time * 5 + i
+    const cs = Math.cos(a), sn = Math.sin(a)
+    c.save()
+    c.transform(cs, sn, -sn, cs, b.x, b.y)
+    c.globalAlpha = 0.8
+    c.drawImage(ring, -rr, -rr, rr * 2, rr * 2)
+    c.restore()
+  }
+  c.globalAlpha = 1
+  c.globalCompositeOperation = 'source-over'
 }
 
 function drawFloaters(c: CanvasRenderingContext2D, w: World) {

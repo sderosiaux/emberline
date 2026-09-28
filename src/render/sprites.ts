@@ -107,6 +107,23 @@ export function glowTexture(color: string, size = 64, hardness = 0.25) {
   return c
 }
 
+/**
+ * Scene tint: while set, sprites are drawn through a cached copy washed with the
+ * biome's light so ground units share the terrain's lighting instead of looking pasted on.
+ */
+let tint: { color: string; k: number; key: string } | null = null
+const tintCache = new Map<string, HTMLCanvasElement>()
+export function setSpriteTint(t: { color: string; k: number } | null) {
+  tint = t ? { ...t, key: `${t.color}|${t.k}` } : null
+}
+function tinted_(sp: Sprite): HTMLCanvasElement {
+  if (!tint) return sp.img
+  const k = `${sp.key}|${tint.key}`
+  let c = tintCache.get(k)
+  if (!c) { c = tinted(sp.img, tint.color, tint.k); tintCache.set(k, c) }
+  return c
+}
+
 /** Draw a sprite centered at (x,y) with optional rotation (radians, 0 = pointing up) and scale. */
 export function drawSprite(
   ctx: CanvasRenderingContext2D, sp: Sprite, x: number, y: number,
@@ -115,7 +132,7 @@ export function drawSprite(
   const w = sp.w * scale, h = sp.h * scale
   if (alpha !== 1) ctx.globalAlpha = alpha
   if (rot === 0) {
-    ctx.drawImage(sp.img, x - w / 2, y - h / 2, w, h)
+    ctx.drawImage(tinted_(sp), x - w / 2, y - h / 2, w, h)
     if (flash > 0) {
       ctx.globalAlpha = alpha * Math.min(1, flash)
       ctx.drawImage(sp.flash, x - w / 2, y - h / 2, w, h)
@@ -124,7 +141,7 @@ export function drawSprite(
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(rot)
-    ctx.drawImage(sp.img, -w / 2, -h / 2, w, h)
+    ctx.drawImage(tinted_(sp), -w / 2, -h / 2, w, h)
     if (flash > 0) {
       ctx.globalAlpha = alpha * Math.min(1, flash)
       ctx.drawImage(sp.flash, -w / 2, -h / 2, w, h)

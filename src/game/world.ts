@@ -39,6 +39,8 @@ export type GameEvent =
   | { type: 'phase'; name: string }
 
 export interface Decal { x: number; y: number; r: number; rot: number }
+/** Tread marks left by ground vehicles, fading over time. */
+export interface Track { x: number; y: number; rot: number; life: number }
 
 /** Transient line visuals for hitscan weapons (arcs, beams, rails). */
 export interface LineFx {
@@ -93,6 +95,9 @@ export class World {
   lines: LineFx[] = []
   lasers: Laser[] = []
   decals: Decal[] = []
+  tracks: Track[] = []
+  /** Biome light colour/strength used to tint ground units so they sit in the scene. */
+  ambient: { color: string; k: number } | null = null
   decor: Decor[] = []
   events: GameEvent[] = []
   timers: Timer[] = []
@@ -139,6 +144,11 @@ export class World {
   after(t: number, fn: () => void) { this.timers.push({ t: this.time + t, fn }) }
 
   addShake(a: number) { this.shake = Math.min(24, this.shake + a * this.shakeScale) }
+
+  addTrack(x: number, y: number, rot: number) {
+    if (this.tracks.length > 300) this.tracks.shift()
+    this.tracks.push({ x, y, rot, life: 6 })
+  }
 
   addDecal(x: number, y: number, r: number) {
     if (this.decals.length > 60) this.decals.shift()
@@ -341,6 +351,8 @@ export class World {
       if ((this.lines[i].life -= dt) <= 0) this.lines.splice(i, 1)
     }
     for (const d of this.decals) d.y += this.scroll * dt
+    for (const t of this.tracks) { t.y += this.scroll * dt; t.life -= dt }
+    while (this.tracks.length && (this.tracks[0].life <= 0 || this.tracks[0].y > PH + 40)) this.tracks.shift()
     while (this.decals.length && this.decals[0].y > PH + 100) this.decals.shift()
     for (let i = this.decor.length - 1; i >= 0; i--) {
       const d = this.decor[i]

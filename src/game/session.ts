@@ -8,6 +8,13 @@ import { audio } from '../audio/audio'
 import { PH } from './consts'
 import { ITEM } from '../data/items'
 
+/** Light colour each biome casts on ground units (see setSpriteTint). */
+const AMBIENT: Record<string, { color: string; k: number }> = {
+  cinder: { color: '#c0612a', k: 0.2 }, glasswater: { color: '#1d8a96', k: 0.14 }, rime: { color: '#dfeaf6', k: 0.2 },
+  shoals: { color: '#3b2d70', k: 0.18 }, halo: { color: '#9aa2b0', k: 0.1 }, graveyard: { color: '#27504a', k: 0.2 },
+  heart: { color: '#4b1f55', k: 0.2 }, garden: { color: '#e7cdf2', k: 0.14 },
+}
+
 export interface MissionResult {
   mission: MissionDef
   stats: World['stats']
@@ -43,6 +50,7 @@ export class Session {
     this.world.scroll = mission.scroll
     this.world.hpScale = 1 + 0.22 * missionIndex
     this.world.creditScale = 1 + 0.3 * missionIndex
+    this.world.ambient = AMBIENT[mission.biome] ?? null
     const L = new LevelScript(mission)
     mission.script(L)
     this.runner = new LevelRunner(L, this.world)
