@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>EMBERLINE — revue des sons</title>
+<style>
+  body { font: 15px/1.4 -apple-system, system-ui, sans-serif; background: #f4f0e6; color: #1c1a22; margin: 0; padding: 24px 32px 80px; }
+  h1 { font-size: 22px; margin: 0 0 4px } p.sub { color: #7a7466; margin: 0 0 18px }
+  .grp { margin: 22px 0 8px; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: #857d6c }
+  .row { display: grid; grid-template-columns: 190px auto 90px 1fr; gap: 10px; align-items: center; padding: 7px 10px; border-bottom: 1px solid #ddd5c3; }
+  .row.up { background: #e6f4e0 } .row.down { background: #fbe3df }
+  .name { font: 600 13px ui-monospace, Menlo, monospace }
+  button { font: 600 13px system-ui; border: 1.5px solid #1c1a22; background: #fff; border-radius: 6px; padding: 5px 10px; cursor: pointer }
+  button.v { padding: 5px 8px; font-weight: 500 } button.on { background: #1c1a22; color: #fff }
+  .votes button { font-size: 16px; padding: 3px 9px }
+  input { font: 13px system-ui; padding: 6px 8px; border: 1px solid #cfc6b0; border-radius: 6px; width: 100%; box-sizing: border-box }
+  .bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1c1a22; color: #fff; padding: 12px 32px; display: flex; gap: 20px; align-items: center }
+  .bar b { color: #ff6a13 } label { user-select: none }
+</style></head><body>
+<h1>Revue des bruitages</h1>
+<p class="sub">▶ joue une variante au hasard, les chiffres jouent chaque variante. 👍 / 👎 + un mot si besoin (« trop aigu », « pas assez de boum »…). Tout est enregistré automatiquement. Raccourcis : ↑↓ naviguer, espace jouer, R = rafale, 1 = 👍, 2 = 👎. <b>Pour les tirs, juge sur la rafale</b> (cadence réelle, gain du jeu), idéalement avec la musique en fond (case en bas).</p>
+<div id="list"></div>
+<div class="bar"><span id="count"></span><label><input type="checkbox" id="music" style="width:auto"> musique de mission en fond</label><label><input type="checkbox" id="chaos" style="width:auto" checked> + explosions / tirs ennemis pendant les rafales</label><label><input type="checkbox" id="fx" style="width:auto"> jouer au volume du jeu (gain du manifest)</label><span id="saved"></span></div>
+<script type="module">
+const GROUPS = [['Tirs du joueur', /^shot_/], ['Ennemis', /^enemy_/], ['Impacts', /^(hit_|shield_hit|hull_hit)/], ['Explosions', /^(expl_|chain_|boss_part|player_death)/],
+  ['Bouclier / état', /^(shield_|low_hull|energy_)/], ['Pickups', /^pickup_/], ['Spéciaux', /^special_/], ['Boss / événements', /^(boss_|secret|radio|mission_|game_over)/], ['Interface', /^ui_/], ['Boucles', /^loop:/], ['Autres', /./]]
+const man = await (await fetch('/public/sfx/manifest.json')).json()
+const votes = await (await fetch('/votes')).json()
+const ctx = new AudioContext()
+const cache = new Map()
+async function buf(f) { if (!cache.has(f)) cache.set(f, fetch('/public/sfx/' + f).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b))); return cache.get(f) }
+let playing = null
+async function play(files, gain, loop) {
+  await ctx.resume(); if (playing) { try { playing.stop() } catch {} }
+  const f = files[Math.floor(Math.random() * files.length)]
+  const s = ctx.createBufferSource(); s.buffer = await buf(f); s.loop = !!loop
+  const g = ctx.createGain(); g.gain.value = document.getElementById('fx').checked ? (gain ?? 1) * 3 : 1
+  s.connect(g).connect(ctx.destination); s.start(); playing = s
+  if (loop) setTimeout(() => { if (playing === s) s.stop() }, 2500)
+}
+// in-context burst: fire rate of each weapon in the game (shots per second)
+const RATE = { shot_pulse: 9, shot_scatter: 4, shot_arc: 6, shot_missile: 2.5, shot_bloom: 2.2, shot_helix: 7, shot_rail: 2, shot_mine: 1, shot_drone: 7, enemy_shot: 5, enemy_shot_heavy: 2, hit_small: 12 }
+let musicSrc = null
+document.getElementById('music').onchange = async (e) => {
+  await ctx.resume()
+  if (musicSrc) { musicSrc.stop(); musicSrc = null }
+  if (!e.target.checked) return
+  const b = await fetch('/public/music/m1.mp3').then(r => r.arrayBuffer()).then(a => ctx.decodeAudioData(a))
+  musicSrc = ctx.createBufferSource(); musicSrc.buffer = b; musicSrc.loop = true
+  const g = ctx.createGain(); g.gain.value = 0.55 * 0.95 * 0.5
+  musicSrc.connect(g).connect(ctx.destination); musicSrc.start(0, 20)
+}
+async function one(files, gain, pitch = 1) {
+  const s = ctx.createBufferSource(); s.buffer = await buf(files[Math.floor(Math.random() * files.length)]); s.playbackRate.value = pitch
+  const g = ctx.createGain(); g.gain.value = (gain ?? 1) * 3
+  s.connect(g).connect(ctx.destination); s.start()
+}
+let burstT = null
+async function burst(it) {
+  await ctx.resume(); clearInterval(burstT)
+  const rate = RATE[it.key] ?? 6, end = performance.now() + 3000
+  const ex = man.sfx.expl_small, eb = man.sfx.enemy_shot, em = man.sfx.expl_medium
+  burstT = setInterval(() => {
+    if (performance.now() > end) { clearInterval(burstT); return }
+    one(it.files, it.gain, 0.95 + Math.random() * 0.1)
+    if (document.getElementById('chaos').checked) {
+      if (Math.random() < 0.08) one(ex.files, ex.gain, 0.9 + Math.random() * 0.2)
+      if (Math.random() < 0.02) one(em.files, em.gain)
+      if (Math.random() < 0.1) one(eb.files, eb.gain)
+    }
+  }, 1000 / rate)
+}
+const items = [...Object.entries(man.sfx).map(([k, v]) => ({ key: k, ...v })), ...Object.entries(man.loops).map(([k, v]) => ({ key: 'loop:' + k, loop: true, files: v.files ?? [v.file], gain: v.gain }))]
+const list = document.getElementById('list'); const rows = []
+const save = async () => { await fetch('/votes', { method: 'POST', body: JSON.stringify(votes, null, 1) }); document.getElementById('saved').textContent = 'enregistré ✓'; count() }
+const count = () => { const n = Object.values(votes).filter(v => v.v).length; document.getElementById('count').innerHTML = `<b>${n}</b> / ${items.length} notés · 👍 ${Object.values(votes).filter(v => v.v === 'up').length} · 👎 ${Object.values(votes).filter(v => v.v === 'down').length}` }
+for (const [title, re] of GROUPS) {
+  const g = items.filter(i => re.test(i.key) && !i.done); if (!g.length) continue
+  list.insertAdjacentHTML('beforeend', `<div class="grp">${title}</div>`)
+  for (const it of g) {
+    it.done = true
+    const v = votes[it.key] ??= {}
+    const row = document.createElement('div'); row.className = 'row ' + (v.v ?? ''); row.tabIndex = 0
+    row.innerHTML = `<span class="name">${it.key}</span><span class="play"><button class="p">▶</button> ${RATE[it.key] ? '<button class="b">🔁 rafale</button> ' : ''}${it.files.length > 1 ? it.files.map((_, i) => `<button class="v" data-i="${i}">${i + 1}</button>`).join(' ') : ''}</span><span class="votes"><button data-v="up">👍</button> <button data-v="down">👎</button></span><input placeholder="commentaire (optionnel)" value="${v.note ?? ''}">`
+    const mark = () => { row.className = 'row ' + (v.v ?? ''); row.querySelectorAll('[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v.v)) }
+    row.querySelector('.p').onclick = () => play(it.files, it.gain, it.loop)
+    row.querySelector('.b')?.addEventListener('click', () => burst(it))
+    row.querySelectorAll('.v').forEach(b => b.onclick = () => play([it.files[+b.dataset.i]], it.gain, it.loop))
+    row.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { v.v = v.v === b.dataset.v ? undefined : b.dataset.v; mark(); save() })
+    row.querySelector('input').onchange = (e) => { v.note = e.target.value; save() }
+    row.addEventListener('focus', () => play(it.files, it.gain, it.loop))
+    row._vote = (d) => { v.v = d; mark(); save() }
+    mark(); rows.push(row); list.append(row)
+  }
+}
+count()
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return
+  const i = rows.indexOf(document.activeElement)
+  if (e.key === 'ArrowDown') { e.preventDefault(); (rows[i + 1] ?? rows[0]).focus() }
+  if (e.key === 'ArrowUp') { e.preventDefault(); (rows[i - 1] ?? rows[0]).focus() }
+  if (e.key === ' ' && i >= 0) { e.preventDefault(); rows[i].querySelector('.p').click() }
+  if ((e.key === 'r' || e.key === 'R') && i >= 0) rows[i].querySelector('.b')?.click()
+  if (e.key === '1' && i >= 0) rows[i]._vote('up')
+  if (e.key === '2' && i >= 0) rows[i]._vote('down')
+})
+</script></body></html>

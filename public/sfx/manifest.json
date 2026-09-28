@@ -2,392 +2,381 @@
  "sfx": {
   "shot_pulse": {
    "files": [
-    "shot_pulse_v1.wav",
-    "shot_pulse_v2.wav",
-    "shot_pulse_v3.wav",
-    "shot_pulse_v4.wav"
+    "shot_pulse_e1.wav",
+    "shot_pulse_e2.wav",
+    "shot_pulse_e3.wav"
    ],
    "gain": 0.1739
   },
   "shot_scatter": {
    "files": [
-    "shot_scatter_v1.wav",
-    "shot_scatter_v2.wav",
-    "shot_scatter_v3.wav",
-    "shot_scatter_v4.wav"
+    "shot_scatter_e1.wav",
+    "shot_scatter_e2.wav",
+    "shot_scatter_e3.wav"
    ],
    "gain": 0.3246
   },
   "shot_arc": {
    "files": [
-    "shot_arc_v1.wav",
-    "shot_arc_v2.wav",
-    "shot_arc_v3.wav",
-    "shot_arc_v4.wav"
+    "shot_arc_e1.wav",
+    "shot_arc_e2.wav",
+    "shot_arc_e3.wav"
    ],
    "gain": 0.2026
   },
   "shot_missile": {
    "files": [
-    "shot_missile_v1.wav",
-    "shot_missile_v2.wav",
-    "shot_missile_v3.wav"
+    "shot_missile_e1.wav",
+    "shot_missile_e2.wav",
+    "shot_missile_e3.wav"
    ],
    "gain": 0.2371
   },
   "shot_bloom": {
    "files": [
-    "shot_bloom_v1.wav",
-    "shot_bloom_v2.wav",
-    "shot_bloom_v3.wav"
+    "shot_bloom_e1.wav",
+    "shot_bloom_e2.wav",
+    "shot_bloom_e3.wav"
    ],
    "gain": 0.3613
   },
   "shot_helix": {
    "files": [
-    "shot_helix_v1.wav",
-    "shot_helix_v2.wav",
-    "shot_helix_v3.wav"
+    "shot_helix_e1.wav",
+    "shot_helix_e2.wav",
+    "shot_helix_e3.wav"
    ],
    "gain": 0.1439
   },
   "shot_rail": {
    "files": [
-    "shot_rail_v1.wav",
-    "shot_rail_v2.wav",
-    "shot_rail_v3.wav"
+    "shot_rail_e1.wav",
+    "shot_rail_e2.wav",
+    "shot_rail_e3.wav"
    ],
    "gain": 0.5941
   },
   "shot_mine": {
    "files": [
-    "shot_mine_v1.wav",
-    "shot_mine_v2.wav",
-    "shot_mine_v3.wav"
+    "shot_mine_e1.wav",
+    "shot_mine_e2.wav"
    ],
    "gain": 0.2123
   },
   "shot_drone": {
    "files": [
-    "shot_drone_v1.wav",
-    "shot_drone_v2.wav",
-    "shot_drone_v3.wav"
+    "shot_drone_e1.wav",
+    "shot_drone_e2.wav",
+    "shot_drone_e3.wav"
    ],
    "gain": 0.084
   },
   "enemy_shot": {
    "files": [
-    "enemy_shot_v1.wav",
-    "enemy_shot_v2.wav",
-    "enemy_shot_v3.wav",
-    "enemy_shot_v4.wav"
+    "enemy_shot_e1.wav",
+    "enemy_shot_e2.wav",
+    "enemy_shot_e3.wav"
    ],
    "gain": 0.174
   },
   "enemy_shot_heavy": {
    "files": [
-    "enemy_shot_heavy_v1.wav",
-    "enemy_shot_heavy_v2.wav",
-    "enemy_shot_heavy_v3.wav"
+    "enemy_shot_heavy_e1.wav",
+    "enemy_shot_heavy_e2.wav"
    ],
    "gain": 0.3499
   },
   "enemy_missile": {
    "files": [
-    "enemy_missile_v1.wav",
-    "enemy_missile_v2.wav"
+    "enemy_missile_e1.wav",
+    "enemy_missile_e2.wav"
    ],
    "gain": 0.1541
   },
   "enemy_laser_charge": {
    "files": [
-    "enemy_laser_charge.wav"
+    "enemy_laser_charge_e1.wav"
    ],
    "gain": 0.1271
   },
   "enemy_laser_fire": {
    "files": [
-    "enemy_laser_fire.wav"
+    "enemy_laser_fire_e1.wav"
    ],
    "gain": 0.2395
   },
   "hit_small": {
    "files": [
-    "hit_small_v1.wav",
-    "hit_small_v2.wav",
-    "hit_small_v3.wav",
-    "hit_small_v4.wav"
+    "hit_small_e1.wav",
+    "hit_small_e2.wav",
+    "hit_small_e3.wav"
    ],
    "gain": 0.1051
   },
   "hit_armor": {
    "files": [
-    "hit_armor_v1.wav",
-    "hit_armor_v2.wav",
-    "hit_armor_v3.wav",
-    "hit_armor_v4.wav"
+    "hit_armor_e1.wav",
+    "hit_armor_e2.wav",
+    "hit_armor_e3.wav"
    ],
    "gain": 0.1158
   },
   "expl_small": {
    "files": [
-    "expl_small_v1.wav",
-    "expl_small_v2.wav",
-    "expl_small_v3.wav",
-    "expl_small_v4.wav"
+    "expl_small_e1.wav",
+    "expl_small_e2.wav",
+    "expl_small_e3.wav"
    ],
    "gain": 0.4753
   },
   "expl_medium": {
    "files": [
-    "expl_medium_v1.wav",
-    "expl_medium_v2.wav",
-    "expl_medium_v3.wav"
+    "expl_medium_e1.wav",
+    "expl_medium_e2.wav",
+    "expl_medium_e3.wav"
    ],
    "gain": 0.8138
   },
   "expl_large": {
    "files": [
-    "expl_large_v1.wav",
-    "expl_large_v2.wav"
+    "expl_large_e1.wav",
+    "expl_large_e2.wav"
    ],
    "gain": 1.175
   },
   "expl_huge": {
    "files": [
-    "expl_huge.wav"
+    "expl_huge_e1.wav"
    ],
    "gain": 1.0468
   },
   "shield_hit": {
    "files": [
-    "shield_hit_v1.wav",
-    "shield_hit_v2.wav",
-    "shield_hit_v3.wav"
+    "shield_hit_e1.wav",
+    "shield_hit_e2.wav",
+    "shield_hit_e3.wav"
    ],
    "gain": 0.245
   },
   "hull_hit": {
    "files": [
-    "hull_hit_v1.wav",
-    "hull_hit_v2.wav"
+    "hull_hit_e1.wav",
+    "hull_hit_e2.wav"
    ],
    "gain": 0.5232
   },
   "shield_down": {
    "files": [
-    "shield_down.wav"
+    "shield_down_e1.wav"
    ],
    "gain": 0.1352
   },
   "shield_restored": {
    "files": [
-    "shield_restored.wav"
+    "shield_restored_e1.wav"
    ],
    "gain": 0.3019
   },
   "low_hull": {
    "files": [
-    "low_hull.wav"
+    "low_hull_e1.wav"
    ],
    "gain": 0.1029
   },
   "pickup_credit": {
    "files": [
-    "pickup_credit_v1.wav",
-    "pickup_credit_v2.wav",
-    "pickup_credit_v3.wav"
+    "pickup_credit_e1.wav",
+    "pickup_credit_e2.wav",
+    "pickup_credit_e3.wav"
    ],
    "gain": 0.1156
   },
   "pickup_big": {
    "files": [
-    "pickup_big_v1.wav",
-    "pickup_big_v2.wav"
+    "pickup_big_e1.wav"
    ],
    "gain": 0.1261
   },
   "pickup_repair": {
    "files": [
-    "pickup_repair.wav"
+    "pickup_repair_e1.wav"
    ],
    "gain": 0.1952
   },
   "pickup_special": {
    "files": [
-    "pickup_special.wav"
+    "pickup_special_e1.wav"
    ],
    "gain": 0.1488
   },
   "pickup_core": {
    "files": [
-    "pickup_core.wav"
+    "pickup_core_e1.wav"
    ],
    "gain": 0.2888
   },
   "special_ready": {
    "files": [
-    "special_ready.wav"
+    "special_ready_e1.wav"
    ],
    "gain": 0.205
   },
   "special_nova": {
    "files": [
-    "special_nova.wav"
+    "special_nova_e1.wav"
    ],
    "gain": 0.7118
   },
   "special_overclock": {
    "files": [
-    "special_overclock.wav"
+    "special_overclock_e1.wav"
    ],
    "gain": 0.3277
   },
   "special_phase": {
    "files": [
-    "special_phase.wav"
+    "special_phase_e1.wav"
    ],
    "gain": 0.1642
   },
   "special_singularity": {
    "files": [
-    "special_singularity.wav"
+    "special_singularity_e1.wav"
    ],
    "gain": 1.25
   },
   "special_swarm": {
    "files": [
-    "special_swarm.wav"
+    "special_swarm_e1.wav"
    ],
    "gain": 0.1321
   },
   "energy_empty": {
    "files": [
-    "energy_empty.wav"
+    "energy_empty_e1.wav"
    ],
    "gain": 0.4038
   },
   "boss_warning": {
    "files": [
-    "boss_warning.wav"
+    "boss_warning_e1.wav"
    ],
    "gain": 0.2092
   },
   "boss_phase": {
    "files": [
-    "boss_phase.wav"
+    "boss_phase_e1.wav"
    ],
    "gain": 0.5087
   },
   "boss_part": {
    "files": [
-    "boss_part_v1.wav",
-    "boss_part_v2.wav"
+    "boss_part_e1.wav"
    ],
    "gain": 0.469
   },
   "secret": {
    "files": [
-    "secret.wav"
+    "secret_e1.wav"
    ],
    "gain": 0.1596
   },
   "ui_move": {
    "files": [
-    "ui_move.wav"
+    "ui_move_e1.wav"
    ],
    "gain": 0.0886
   },
   "ui_select": {
    "files": [
-    "ui_select.wav"
+    "ui_select_e1.wav"
    ],
    "gain": 0.0724
   },
   "ui_back": {
    "files": [
-    "ui_back.wav"
+    "ui_back_e1.wav"
    ],
    "gain": 0.0825
   },
   "ui_buy": {
    "files": [
-    "ui_buy.wav"
+    "ui_buy_e1.wav"
    ],
    "gain": 0.1004
   },
   "ui_sell": {
    "files": [
-    "ui_sell.wav"
+    "ui_sell_e1.wav"
    ],
    "gain": 0.0577
   },
   "ui_deny": {
    "files": [
-    "ui_deny.wav"
+    "ui_deny_e1.wav"
    ],
    "gain": 0.2678
   },
   "ui_upgrade": {
    "files": [
-    "ui_upgrade.wav"
+    "ui_upgrade_e1.wav"
    ],
    "gain": 0.0779
   },
   "mission_complete": {
    "files": [
-    "mission_complete.wav"
+    "mission_complete_e1.wav"
    ],
    "gain": 0.8908
   },
   "game_over": {
    "files": [
-    "game_over.wav"
+    "game_over_e1.wav"
    ],
    "gain": 0.4237
   },
   "radio": {
    "files": [
-    "radio.wav"
+    "radio_e1.wav"
    ],
    "gain": 0.0483
   },
   "player_death": {
    "files": [
-    "player_death.wav"
+    "player_death_e1.wav"
    ],
    "gain": 1.2059
   },
   "chain_reaction": {
    "files": [
-    "chain_reaction.wav"
+    "chain_reaction_e1.wav"
    ],
    "gain": 0.5465
   },
   "shield_gen_down": {
    "files": [
-    "shield_gen_down.wav"
+    "shield_gen_down_e1.wav"
    ],
    "gain": 0.1844
   }
  },
  "loops": {
   "beam": {
-   "file": "loop_beam.wav",
-   "loopStart": 0.2,
-   "loopEnd": 2.2,
+   "file": "loop_beam_e.wav",
+   "loopStart": 0.0,
+   "loopEnd": 6.0,
    "gain": 0.1246
   },
   "charge": {
-   "file": "loop_charge.wav",
-   "loopStart": 1.3,
-   "loopEnd": 2.3,
+   "file": "loop_charge_e.wav",
+   "loopStart": 0.0,
+   "loopEnd": 4.5,
    "gain": 0.0909
   },
   "alarm": {
-   "file": "loop_alarm.wav",
-   "loopStart": 0.06,
-   "loopEnd": 1.31,
+   "file": "loop_alarm_e.wav",
+   "loopStart": 0.0,
+   "loopEnd": 4.5,
    "gain": 0.0917
   }
  }
