@@ -5,3 +5,4 @@ dist
 playtest-output
 .claude
 __pycache__
+tools/music/raw

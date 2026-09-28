@@ -1,6 +1,6 @@
 # EMBERLINE
 
-A vertical shoot'em up in the Tyrian tradition: arcade combat, credits, a quartermaster between missions, and a ship that ends the campaign carrying far more guns than a salvage courier should. Original game, original universe. Every sprite, background, sound and piece of music is generated in code; the repository contains no image or audio files.
+A vertical shoot'em up in the Tyrian tradition: arcade combat, credits, a quartermaster between missions, and a ship that ends the campaign carrying far more guns than a salvage courier should. Original game, original universe. Every sprite, background and sound effect is generated in code. The soundtrack (13 instrumental tracks) was generated with Google's Lyria 3 model from written music briefs; it's the only asset in the repository.
 
 You fly the Kestrel against the Choir, a mining-consortium intelligence that turned the Verge colonies' machines into a fleet. Seven missions, one hidden detour, eight bosses.
 
@@ -78,7 +78,9 @@ BOSS=m6 npx vitest run tests/boss.sim.test.ts        # boss time-to-kill for one
 
 The balance simulation flies the full campaign three times, once per build style (pulse, spread, heavy), with the autopilot and no god mode, and prints what each run earned and bought along the way. The economy was tuned against those numbers rather than hand estimates.
 
-`tools/` holds the developer pages (`gallery.html` for sprites, `bg-lab.html` for biomes, `audio-lab.html` to audition every sound and track) and the Playwright scripts used for screenshots.
+The soundtrack lives in `public/music/`. `tools/generate-music.py` holds the prompt for every track and regenerates any of them (needs `GEMINI_API_KEY`); `tools/music-loops.py` finds each track's loop points, since generated songs end with a fade rather than looping. The synth score in `src/audio/` is still there as a fallback if a file fails to load.
+
+`tools/` also holds the developer pages (`gallery.html` for sprites, `bg-lab.html` for biomes, `audio-lab.html` to audition every sound and track) and the Playwright scripts used for screenshots.
 
 ## Layout
 

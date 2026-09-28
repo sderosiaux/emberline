@@ -1,0 +1,119 @@
+{
+ "boss": {
+  "duration": 122.984,
+  "harmony": 0.99,
+  "loopEnd": 114.3815,
+  "loopStart": 30.3815,
+  "rhythm": 0.906,
+  "score": 0.967,
+  "xfade": 0.06
+ },
+ "ending": {
+  "duration": 120.633,
+  "harmony": 0.991,
+  "loopEnd": 103.3172,
+  "loopStart": 56.4838,
+  "rhythm": 0.888,
+  "score": 0.954,
+  "xfade": 0.06
+ },
+ "final_boss": {
+  "duration": 117.917,
+  "harmony": 0.975,
+  "loopEnd": 93.0424,
+  "loopStart": 21.0348,
+  "rhythm": 0.878,
+  "score": 0.957,
+  "xfade": 0.06
+ },
+ "hangar": {
+  "duration": 122.723,
+  "harmony": 0.999,
+  "loopEnd": 108.1702,
+  "loopStart": 28.1642,
+  "rhythm": 0.936,
+  "score": 0.995,
+  "xfade": 0.06
+ },
+ "m1": {
+  "duration": 122.776,
+  "harmony": 1.0,
+  "loopEnd": 114.5556,
+  "loopStart": 60.5554,
+  "rhythm": 0.945,
+  "score": 0.987,
+  "xfade": 0.06
+ },
+ "m2": {
+  "duration": 123.82,
+  "harmony": 0.998,
+  "loopEnd": 83.5454,
+  "loopStart": 24.4597,
+  "rhythm": 0.889,
+  "score": 0.959,
+  "xfade": 0.06
+ },
+ "m3": {
+  "duration": 123.298,
+  "harmony": 0.999,
+  "loopEnd": 85.194,
+  "loopStart": 32.8303,
+  "rhythm": 0.972,
+  "score": 1.004,
+  "xfade": 0.06
+ },
+ "m4": {
+  "duration": 122.723,
+  "harmony": 0.999,
+  "loopEnd": 118.1083,
+  "loopStart": 33.0171,
+  "rhythm": 0.872,
+  "score": 0.97,
+  "xfade": 0.06
+ },
+ "m5": {
+  "duration": 122.514,
+  "harmony": 1.0,
+  "loopEnd": 110.9914,
+  "loopStart": 53.6758,
+  "rhythm": 0.932,
+  "score": 0.984,
+  "xfade": 0.06
+ },
+ "m6": {
+  "duration": 118.1,
+  "harmony": 0.999,
+  "loopEnd": 101.5409,
+  "loopStart": 49.368,
+  "rhythm": 0.938,
+  "score": 0.985,
+  "xfade": 0.06
+ },
+ "m7": {
+  "duration": 119.98,
+  "harmony": 0.99,
+  "loopEnd": 99.6949,
+  "loopStart": 29.2898,
+  "rhythm": 0.759,
+  "score": 0.895,
+  "xfade": 0.06
+ },
+ "secret": {
+  "duration": 123.402,
+  "harmony": 1.0,
+  "loopEnd": 108.2282,
+  "loopStart": 52.8366,
+  "rhythm": 0.974,
+  "score": 1.007,
+  "xfade": 0.06
+ },
+ "title": {
+  "duration": 124.108,
+  "harmony": 1.0,
+  "loopEnd": 109.9697,
+  "loopStart": 61.9712,
+  "rhythm": 0.949,
+  "score": 0.989,
+  "xfade": 0.06
+ }
+}

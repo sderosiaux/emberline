@@ -6,6 +6,7 @@ import { type LoopVoice, startLoop } from './loops'
 import { SongPlayer } from './player'
 import { SFX, spawnSfx } from './sfx'
 import { TRACKS } from './tracks'
+import { StreamMusic } from './stream'
 import type { Intensity, LoopHandle, LoopName, SfxName, SfxOpts, TrackId } from './types'
 
 export type { Intensity, LoopHandle, LoopName, SfxName, SfxOpts, TrackId } from './types'
@@ -39,6 +40,8 @@ const clamp01 = (v: number): number => Math.max(0, Math.min(1, v))
 class Engine {
   private ctx: AudioContext | null = null
   private mx: Mixer | null = null
+  /** Recorded soundtrack; the procedural composer is only a fallback when a file can't load. */
+  private stream: StreamMusic | null = null
   private vols = { master: 1, sfx: 1, music: 1 }
   private paused = false
   private voices: Voice[] = []
@@ -59,8 +62,9 @@ class Engine {
       this.mx = createMixer(this.ctx, this.ctx.destination)
       this.applyVolumes()
       if (this.paused) this.applyPause(true)
+      this.stream = new StreamMusic(this.ctx as AudioContext, this.mx.musicIn)
       setInterval(() => this.tick(), TICK_MS)
-      if (this.currentId) this.startTrack(this.currentId, 0.5)
+      if (this.currentId) { const id = this.currentId; this.currentId = null; this.play(id, 0.5) }
     }
     if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') void this.ctx.resume()
   }
@@ -202,16 +206,22 @@ class Engine {
     this.currentId = id
     if (!this.ctx || !this.mx) return
     this.fadeOutAll(fade)
-    this.startTrack(id, fade)
+    const stream = this.stream
+    if (!stream) { this.startTrack(id, fade); return }
+    void stream.play(id, fade).then((ok) => {
+      if (!ok && this.currentId === id) this.startTrack(id, fade)
+    })
   }
 
   stop(fade = 1): void {
     this.currentId = null
     this.fadeOutAll(fade)
+    this.stream?.stop(fade)
   }
 
   setIntensity(level: Intensity): void {
     this.level = level
+    this.stream?.setIntensity(level)
   }
 
   current(): TrackId | null {
@@ -257,6 +267,7 @@ class Engine {
     const ctx = this.ctx
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
+    this.stream?.tick()
     if (!this.paused) {
       for (const tr of this.tracks) {
         if (tr.player.nextTime < now - 0.1) tr.player.catchUp(now + 0.02)
