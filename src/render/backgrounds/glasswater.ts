@@ -2,8 +2,7 @@
 import { clamp, rng, smoothstep } from '../../core/math'
 import {
   FH, FS, FW, Fader, H, Scroller, TILE_H, TileSet, W, blit, cMix, cMul, cOut, cSet, cached, cachedSeeded, canvas, cloudSprite,
-  drain, field, grid, hash3, lut, slope, tile2, tileNoise, upscale, wrapX, type Background, type Job,
-} from './kit'
+  drain, field, grid, hash3, lut, slope, tile2, tileNoise, upscale, wrapX, type Background, type Job, fillFrame } from './kit'
 import { pebble } from './motifs'
 
 const WATER = lut([
@@ -203,13 +202,13 @@ export function createGlasswater(seed = 1): Background {
       if (s > 0) {
         ctx.globalCompositeOperation = 'multiply'
         ctx.fillStyle = `rgba(70,90,120,${s * 0.7})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
       }
       if (flash > 0) {
         ctx.globalCompositeOperation = 'screen'
         const f = flash * (0.6 + 0.4 * Math.sin(flash * 40))
         ctx.fillStyle = `rgba(190,215,255,${f * 0.35 * s})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
       }
       ctx.restore()
     },

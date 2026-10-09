@@ -22,7 +22,7 @@ registerEnemy({
     if (e.s.k === undefined) e.s.k = k
     if (k === e.s.k) return
     e.s.k = k
-    if (!onScreen(e, 20) || e.y > w.player.y - 170 || !w.player.alive) return
+    if (!onScreen(w, e, 20) || e.y > w.player.y - 170 || !w.player.alive) return
     const dir = k % 2 ? 1 : -1
     const warn = 0.9, life = 2.1, sweep = dir * 0.16
     w.laser(e.x, e.y + 30, Math.PI / 2 - dir * 0.2 - sweep * warn, 900, 13, warn, life, e, sweep)
@@ -162,6 +162,8 @@ export const m4: MissionDef = {
     L.at(32).wave('ore_rock', 3, 1, F.drift(X(0.5), 0, 65))
     L.at(33.5).wave('wasp', 5, 0.25, F.hover(110, 4, X(0.15), X(0.85)))
     L.at(36).gate(14)
+    L.at(36.1).horde([['dart', 10], ['weaver', 5], ['dart', 10], ['wasp', 6], ['dart', 9]]).reveal({ banner: 'Massed contacts', play: true, hold: 7 }).radio('KESTREL', 'The belt is moving. No. The belt is ships.')
+    L.at(36.15).gate(20)
     L.at(37).scroll(70, 3)
 
     // ── the ghost (secret) ──

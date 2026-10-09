@@ -8,6 +8,7 @@ import { explode, sparks } from './fx'
 import { P, C } from '../render/particles'
 import { audio, type TrackId } from '../audio/audio'
 import { rand } from '../core/math'
+import { type Mods, type PerkDef, rollCards, restorePerks, onGraze, onKill, onBomb, riftDrainMul, magnetMul, pointMul } from './perks'
 
 /**
  * Arcade mode: a danmaku-flavoured run (Touhou-like) on top of the campaign engine.
@@ -28,9 +29,14 @@ export interface ArcadeRun {
   continues: number
   /** Current arcade weapon (see ARCADE_WEAPONS). */
   weapon: string
+  /** Level-up cards picked so far: perk id → rank. */
+  mods: Mods
+  xp: number
+  xpNext: number
+  level: number
 }
 
-export const newArcadeRun = (): ArcadeRun => ({ score: 0, lives: 3, bombs: 3, power: 0, graze: 0, stage: 0, captured: 0, spells: 0, continues: 0, weapon: 'pulse' })
+export const newArcadeRun = (): ArcadeRun => ({ score: 0, lives: 3, bombs: 3, power: 0, graze: 0, stage: 0, captured: 0, spells: 0, continues: 0, weapon: 'pulse', mods: {}, xp: 0, xpNext: 40, level: 1 })
 
 /** Raiden-style weapon capsules cycle through these; the letter and colour are what the player reads. */
 export const ARCADE_WEAPONS = [
@@ -88,6 +94,10 @@ export class Arcade {
   spell: { name: string; t: number; failed: boolean } | null = null
   private spellIdx = 0
   private gunId = ''
+  /** Scrap Plating: the next hit is absorbed. */
+  scrapShield = false
+  /** Level-up reached: the app pauses and shows these cards. */
+  pendingCards: PerkDef[] | null = null
   private returnTrack: TrackId | null = null
   private baseScroll = 0
   private baseFire = 1
@@ -98,6 +108,19 @@ export class Arcade {
     this.baseSpeed = w.diff.bulletSpeed
     w.diff = { ...w.diff, bulletSpeed: this.baseSpeed * ARCADE.speedMul }
     w.score = run.score
+    restorePerks(w, run.mods)
+  }
+
+  gainXp(n: number) {
+    const r = this.run
+    r.xp += n
+    if (r.xp >= r.xpNext && !this.pendingCards) {
+      r.xp -= r.xpNext
+      r.level++
+      r.xpNext = Math.round(r.xpNext * 1.32)
+      this.pendingCards = rollCards(r.mods)
+      if (!this.pendingCards.length) this.pendingCards = null
+    }
   }
 
   get layer() { return this.inRift ? 1 : 0 }
@@ -107,7 +130,7 @@ export class Arcade {
     if (this.roll > 0) this.roll = Math.max(0, this.roll - dt * 2.5)
     if (this.bombT > 0) this.bombT -= dt
     if (this.inRift) {
-      this.rift -= ARCADE.riftDrain * dt
+      this.rift -= ARCADE.riftDrain * riftDrainMul(w) * dt
       if (this.rift <= 0) { this.rift = 0; this.flip(w, true) }
     }
     if (this.respawnT > 0) {
@@ -121,6 +144,7 @@ export class Arcade {
         w.emit({ type: 'radio', who: 'SPELL', text: 'Time out — no capture bonus.', tone: 'odd' })
       }
     }
+    p.magnet = 95 * magnetMul(w)
     // auto-collect line: flying high pulls every item in (Touhou's point-of-collection)
     if (p.alive && this.respawnT <= 0 && p.y < PH * ARCADE.collectLine) {
       for (const k of w.pickups.items) if (k.active) k.magnet = true
@@ -145,6 +169,7 @@ export class Arcade {
     this.inRift = !this.inRift
     this.roll = 1
     if (this.inRift) {
+      if (this.run.mods.riftbattery >= 2) w.clearBullets(p.x, p.y, 160, true)
       this.baseScroll = w.scroll
       w.scroll = this.baseScroll * ARCADE.riftScroll
       w.diff = { ...w.diff, fireRate: this.baseFire * ARCADE.riftFire, bulletSpeed: this.baseSpeed * ARCADE.speedMul * ARCADE.riftBulletSpeed }
@@ -181,6 +206,8 @@ export class Arcade {
         if (before < ARCADE.riftCost && this.rift >= ARCADE.riftCost && !w.preview) audio.sfx('rift_ready', { vol: 0.7 })
       }
       w.parts.spawn(P.Spark, w.player.x, w.player.y, (w.player.x - b.x) * 6, (w.player.y - b.y) * 6, 0.15, 1.4, 0.5, C.white, 6)
+      this.gainXp(1)
+      onGraze(w)
       if (!w.preview) audio.sfx('graze', { vol: 0.45, pitch: 0.95 + Math.random() * 0.15 })
     }
     return 'none'
@@ -194,6 +221,15 @@ export class Arcade {
   hit(w: World) {
     if (this.invulnerable(w) || w.god) return
     const p = w.player
+    if (this.scrapShield) {
+      // Scrap Plating eats the hit
+      this.scrapShield = false
+      p.invuln = 1.2
+      w.clearBullets(p.x, p.y, 120)
+      w.parts.spawn(P.Ring, p.x, p.y, 0, 0, 0.4, 10, 80, C.cyan)
+      if (!w.preview) audio.sfx('shield_down')
+      return
+    }
     if (this.spell) this.spell.failed = true
     this.run.lives--
     explode(w, p.x, p.y, 'large')
@@ -230,11 +266,14 @@ export class Arcade {
     if (this.spell) this.spell.failed = true
     triggerSpecial(w.player, w, 'nova')
     if (!w.preview) audio.sfx('bomb')
+    onBomb(w)
     w.clearBullets(w.player.x, w.player.y, 2000, true)
   }
 
   /** Enemies drop power and point items instead of credits. */
   drop(w: World, e: Enemy) {
+    onKill(w, e)
+    this.gainXp(Math.max(1, e.def.charge))
     const big = e.maxHp > 300 || e.def.explode === 'large' || e.def.explode === 'huge'
     const nPoint = big ? 6 : e.maxHp > 60 ? 2 : Math.random() < 0.5 ? 1 : 0
     const nPower = big ? 3 : Math.random() < 0.3 ? 1 : 0
@@ -268,7 +307,7 @@ export class Arcade {
     }
     // point items: full value above the collection line, less the lower you grabbed them
     const k = y < PH * ARCADE.collectLine ? 1 : Math.max(0.1, 1 - (y - PH * ARCADE.collectLine) / (PH * 0.8))
-    const v = Math.round((this.pointValue * k * (this.inRift ? ARCADE.riftScore : 1)) / 10) * 10
+    const v = Math.round((this.pointValue * k * pointMul(w) * (this.inRift ? ARCADE.riftScore : 1)) / 10) * 10
     w.score += v
     if (k === 1 || v > 20000) w.floater(x, y, v.toLocaleString('en-US'), k === 1 ? '#ffe066' : '#9fd3ff')
     if (!w.preview) audio.sfx('item_point', { vol: 0.35, pitch: 0.9 + k * 0.3 })

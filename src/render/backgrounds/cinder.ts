@@ -2,8 +2,7 @@
 import { clamp, rng, smoothstep } from '../../core/math'
 import {
   FH, FW, Fader, H, Scroller, TILE_H, W, blit, cMix, cMul, cOut, cSet, cached, cachedSeeded, canvas, cloudSprite, field,
-  SeamNoise, FS, TileSet, grid, hash3, lut, slope, tileNoise, upscale, wrapX, wrapY, type Background, type Ctx, type Job,
-} from './kit'
+  SeamNoise, FS, TileSet, grid, hash3, lut, slope, tileNoise, upscale, wrapX, wrapY, type Background, type Ctx, type Job, fillFrame } from './kit'
 import { mesa, pebble } from './motifs'
 
 const SAND = lut([[0, '#a8744a'], [0.35, '#c48f5c'], [0.7, '#d9aa72'], [1, '#e8c18c']])
@@ -221,13 +220,13 @@ export function createCinder(seed = 1): Background {
         g.addColorStop(0, `rgba(255,170,110,${d * 0.45})`)
         g.addColorStop(1, `rgba(170,80,90,${d * 0.6})`)
         ctx.fillStyle = g
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         ctx.globalCompositeOperation = 'screen'
         const s = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 1.1)
         s.addColorStop(0, `rgba(255,140,60,${d * 0.25})`)
         s.addColorStop(1, 'rgba(255,140,60,0)')
         ctx.fillStyle = s
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         ctx.restore()
       }
     },

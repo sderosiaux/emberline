@@ -2,20 +2,21 @@ import type { World } from './world'
 import type { Enemy } from './entities'
 import { BulletKind } from './entities'
 import { TAU } from '../core/math'
-import { PH, PW } from './consts'
 import { sfxAt } from './fx'
 import { P, C } from '../render/particles'
 import { ARCADE } from './arcade'
 
 /** Shared bullet vocabulary for enemies and bosses. */
 
-export function onScreen(e: Enemy, margin = 0) {
-  return e.y > margin && e.y < PH - margin && e.x > -10 && e.x < PW + 10
+/** Inside the playfield (the wide view during a playable pull-back). */
+export function onScreen(w: World, e: Enemy, margin = 0) {
+  const b = w.bounds
+  return e.y > b.y0 + margin && e.y < b.y1 - margin && e.x > b.x0 - 10 && e.x < b.x1 + 10
 }
 
-/** Enemies only shoot when visible and not below the player (fairness). */
+/** Enemies only shoot when visible, not below the player, and not during a camera pull-back (fairness). */
 export function canFire(w: World, e: Enemy) {
-  return onScreen(e, 10) && e.y < w.player.y - 50 && w.player.alive && !e.hidden
+  return onScreen(w, e, 10) && e.y < w.player.y - 50 && w.player.alive && !e.hidden && !w.cam.calm
 }
 
 const sfxGate = new WeakMap<World, number>()

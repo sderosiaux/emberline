@@ -26,6 +26,18 @@ export interface Background {
 }
 
 export type Ctx = CanvasRenderingContext2D
+
+/**
+ * What a draw call must cover. The normal frame is [0,W]×[0,H]; for a camera pull-back
+ * the renderer raises `top` (the terrain still to come above the field, which the tile
+ * chain already holds), and paints side columns with their own `salt` (another variant
+ * order) and `shift` (another vertical phase) so they are new ground, not copies.
+ * Always reset to zeros after use.
+ */
+export const area = { top: 0, salt: 0, shift: 0 }
+
+/** fillRect over the whole frame being drawn (the field plus any extension above it). */
+export function fillFrame(ctx: Ctx) { ctx.fillRect(0, -area.top, W, H + area.top) }
 export const W = PW
 export const H = PH
 export const TILE_H = 1024
@@ -256,24 +268,27 @@ export class TileSet {
 /** Chains tile variants vertically; content moves down as `pos` grows. */
 export class Scroller {
   pos = 0
-  private chosen = new Map<number, number>()
+  private chosenBy = [new Map<number, number>(), new Map<number, number>(), new Map<number, number>()]
   constructor(readonly set: TileSet, readonly seed: number, readonly th = TILE_H) {}
 
   /** Variant for tile k, fixed the first time k is needed; never the same twice in a row. */
   variant(k: number) {
-    const hit = this.chosen.get(k)
+    const chosen = this.chosenBy[area.salt % this.chosenBy.length]
+    const hit = chosen.get(k)
     if (hit !== undefined) return hit
     const n = this.set.ready.length
-    let v = Math.floor(hash3(k, 5, this.seed) * n)
-    const prev = this.chosen.get(k - 1)
+    let v = Math.floor(hash3(k, 5 + area.salt * 17, this.seed) * n)
+    const prev = chosen.get(k - 1)
     if (n > 1 && v === prev) v = (v + 1) % n
-    this.chosen.set(k, v)
-    this.chosen.delete(k - 4)
+    chosen.set(k, v)
+    chosen.delete(k - 4)
     return v
   }
 
+  private get at() { return this.pos + area.shift }
+
   /** Screen y of tile k's top edge. Whole pixels: fractional joins leave a visible hairline. */
-  top(k: number) { return Math.round(H + this.pos - (k + 1) * this.th) }
+  top(k: number) { return Math.round(H + this.at - (k + 1) * this.th) }
 
   update(dt: number, speed: number) {
     this.pos += speed * dt
@@ -282,21 +297,21 @@ export class Scroller {
 
   /** sx selects a W-wide layer inside the tile (tiles may pack several layers side by side). */
   draw(ctx: Ctx, dx = 0, dy = 0, sx = 0) {
-    const th = this.th
-    for (let k = Math.floor((this.pos + dy) / th); ; k++) {
+    const th = this.th, y0 = -area.top
+    for (let k = Math.floor((this.at + dy) / th); ; k++) {
       const top = this.top(k) + Math.round(dy)
-      if (top + th <= 0) break
-      const sy = Math.max(0, -top), ey = Math.min(th, H - top)
+      if (top + th <= y0) break
+      const sy = Math.max(0, y0 - top), ey = Math.min(th, H - top)
       const img = this.set.ready[this.variant(k)]
       if (ey > sy) ctx.drawImage(img, sx, sy, W, ey - sy, dx, top + sy, W, ey - sy)
-      if (top <= 0) break
+      if (top <= y0) break
     }
   }
 
   /** Re-blit the ground strip [y, y+h) shifted horizontally (heat shimmer, glitches). */
   strip(ctx: Ctx, y: number, h: number, dx: number) {
     const th = this.th
-    const k = Math.floor((this.pos + H - y) / th)
+    const k = Math.floor((this.at + H - y) / th)
     const top = this.top(k)
     let sy = y - top
     let sh = h
@@ -312,7 +327,7 @@ export class Scroller {
 export function vtile(ctx: Ctx, img: HTMLCanvasElement, offset: number, x = 0, w = img.width) {
   const h = img.height
   let y = (offset % h) - h
-  if (y > 0) y -= h
+  while (y > -area.top) y -= h
   for (; y < H; y += h) ctx.drawImage(img, x, y, w, h)
 }
 
@@ -322,7 +337,7 @@ export function tile2(ctx: Ctx, img: HTMLCanvasElement, ox: number, oy: number, 
   let x0 = (ox % w) - w
   if (x0 > 0) x0 -= w
   let y0 = (oy % h) - h
-  if (y0 > 0) y0 -= h
+  while (y0 > -area.top) y0 -= h
   for (let y = y0; y < H; y += h) for (let x = x0; x < W; x += w) ctx.drawImage(img, x, y, w, h)
 }
 

@@ -1,14 +1,16 @@
 import type { World } from '../game/world'
 import type { Background } from './backgrounds'
+import { area, TILE_H } from './backgrounds/kit'
 import { getSprite, drawSprite, drawShadow, glowTexture, hasSprite, setSpriteTint } from './sprites'
 import { bulletTex, bulletFx, laserFx } from './bullets'
 import { PW, PH, SCREEN_W, SCREEN_H, FIELD_W, ZOOM } from '../game/consts'
 import { Sunline, Aegis, Lantern, Halo } from '../game/weapons'
 import { specialFx } from '../game/specials'
 import { Arcade, CAPSULE_CYCLE } from '../game/arcade'
+import { bossBounds } from '../game/bosses/common'
 import { PickupKind, BulletKind } from '../game/entities'
 import type { Enemy } from '../game/entities'
-import { TAU } from '../core/math'
+import { TAU, clamp } from '../core/math'
 import { P, C } from './particles'
 import { T } from '../ui/theme'
 
@@ -78,20 +80,163 @@ export class Renderer {
   showField(on: boolean) { this.canvas.style.visibility = on ? 'visible' : 'hidden' }
 
   drawField(w: World, bg: Background | null) {
-    const c = this.begin()
+    const cam = w.cam
+    if (cam.zoom >= 0.999) {
+      const c = this.begin()
+      c.save()
+      c.fillStyle = '#20202a'
+      c.fillRect(0, 0, PW, PH)
+      c.translate(w.shakeX, w.shakeY)
+      if (bg) bg.drawBase(c)
+      else { c.fillStyle = '#20202a'; c.fillRect(-20, -20, PW + 40, PH + 40) }
+      drawWorld(c, w, bg, this.showHitboxes)
+      c.restore()
+      if (w.flashScreen > 0) {
+        c.fillStyle = `rgba(255,248,235,${Math.min(0.8, w.flashScreen)})`
+        c.fillRect(0, 0, PW, PH)
+      }
+      return
+    }
+    // pulled back: same world, wider view anchored on the field's bottom edge
+    const c = this.ctx
+    const k = this.scale * ZOOM * cam.zoom
+    const v = cam.view()
+    c.setTransform(k, 0, 0, k, -v.x * k, -v.y * k)
+    c.imageSmoothingEnabled = true
+    c.imageSmoothingQuality = 'medium'
     c.save()
-    c.fillStyle = '#20202a'
-    c.fillRect(0, 0, PW, PH)
     c.translate(w.shakeX, w.shakeY)
-    if (bg) bg.drawBase(c)
-    else { c.fillStyle = '#20202a'; c.fillRect(-20, -20, PW + 40, PH + 40) }
+    this.drawWideBase(c, w, bg, v, k)
     drawWorld(c, w, bg, this.showHitboxes)
+    drawTactical(c, w, v, k / this.scale)
     c.restore()
     if (w.flashScreen > 0) {
       c.fillStyle = `rgba(255,248,235,${Math.min(0.8, w.flashScreen)})`
-      c.fillRect(0, 0, PW, PH)
+      c.fillRect(v.x, v.y, v.w, v.h)
     }
   }
+
+  private colBufs: HTMLCanvasElement[] | null = null
+
+  /**
+   * Wide terrain without copies. The centre column is the field drawn taller: the tile
+   * chain already holds the ground still to come, so above the field is real, continuous
+   * terrain. Each side column is drawn by the biome again with another variant order and
+   * vertical phase (kit `area`), flipped so a shared tile never reads as a repeat, and the
+   * centre's edges are feathered over it. Biomes only paint one field width, so this is
+   * as wide as real ground gets.
+   */
+  private drawWideBase(c: CanvasRenderingContext2D, w: World, bg: Background | null, v: { x: number; y: number; w: number; h: number }, k: number) {
+    const ext = Math.max(0, Math.ceil(-v.y))
+    const bw = Math.max(1, Math.round(PW * k)), bh = Math.max(1, Math.round((PH + ext) * k))
+    const bufs = (this.colBufs ??= [0, 1, 2].map(() => document.createElement('canvas')))
+    const paint = (cv: HTMLCanvasElement, salt: number, shift: number, flip: boolean) => {
+      if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh }
+      const x = cv.getContext('2d')!
+      x.setTransform(1, 0, 0, 1, 0, 0)
+      x.globalCompositeOperation = 'source-over'
+      x.globalAlpha = 1
+      x.fillStyle = '#20202a'
+      x.fillRect(0, 0, bw, bh)
+      x.setTransform(flip ? -k : k, 0, 0, k, flip ? bw : 0, ext * k)
+      if (bg) {
+        area.top = ext; area.salt = salt; area.shift = shift
+        try { bg.drawBase(x) } finally { area.top = 0; area.salt = 0; area.shift = 0 }
+      }
+      return cv
+    }
+    // side columns overlap the field by F so the feathered centre edge has ground under it
+    const F = 140 * w.cam.wide
+    const i0 = Math.floor(v.x / PW), i1 = Math.floor((v.x + v.w) / PW)
+    if (i0 < 0) c.drawImage(paint(bufs[1], 1, TILE_H * 0.37, true), -PW + F, -ext, PW, PH + ext)
+    if (i1 > 0) c.drawImage(paint(bufs[2], 2, TILE_H * 0.71, true), PW - F, -ext, PW, PH + ext)
+    const mid = paint(bufs[0], 0, 0, false)
+    if (F > 1) {
+      const x = mid.getContext('2d')!
+      x.setTransform(1, 0, 0, 1, 0, 0)
+      x.globalCompositeOperation = 'destination-in'
+      const f = (F / PW) * bw
+      const g = x.createLinearGradient(0, 0, bw, 0)
+      g.addColorStop(0, 'rgba(0,0,0,0)')
+      g.addColorStop(f / bw, 'rgba(0,0,0,1)')
+      g.addColorStop(1 - f / bw, 'rgba(0,0,0,1)')
+      g.addColorStop(1, 'rgba(0,0,0,0)')
+      x.fillStyle = g
+      x.fillRect(0, 0, bw, bh)
+      x.globalCompositeOperation = 'source-over'
+    }
+    c.drawImage(mid, 0, -ext, PW, PH + ext)
+  }
+}
+
+/**
+ * Strategic overlay while pulled back: a bracket on every contact outside the field
+ * (Supreme Commander's icon layer). The boss gets a named bracket. No frame around the
+ * field: the pull-back should feel like the camera moving, not a UI opening.
+ */
+function drawTactical(c: CanvasRenderingContext2D, w: World, v: { x: number; y: number; w: number; h: number }, px: number) {
+  const cam = w.cam
+  const u = 1 / px // one screen pixel in world units
+  if (cam.playing && cam.phase !== 'out') drawWideTimer(c, cam.holdLeft, v, u, cam.wide)
+  // the brackets are the reveal moment; in a playable pull-back they clear out once play starts
+  const a = cam.wide * (cam.playing ? clamp(1 - (cam.holdT - 0.8) / 0.6, 0, 1) * (cam.phase === 'back' ? 0 : 1) : 1)
+  if (a <= 0.01) return
+  c.save()
+  c.lineWidth = 1.5 * u
+  c.strokeStyle = `rgba(255,90,70,${0.85 * a})`
+  c.beginPath()
+  for (const e of w.enemies) {
+    if (e.dead || e.gone || e.hidden || e.bossPart || e.parent) continue
+    if (e.x > 0 && e.x < PW && e.y > 0 && e.y < PH) continue
+    if (e.x < v.x || e.x > v.x + v.w || e.y < v.y || e.y > v.y + v.h) continue
+    const r = Math.max(e.r * e.scale + 4 * u, 9 * u), q = r * 0.45
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const x = e.x + sx * r, y = e.y + sy * r
+      c.moveTo(x - sx * q, y); c.lineTo(x, y); c.lineTo(x, y - sy * q)
+    }
+  }
+  c.stroke()
+  const b = w.boss
+  if (b && !b.dead) {
+    const bb = bossBounds(w)
+    const m = 10 * u, x0 = bb.x - m, y0 = bb.y - m, x1 = bb.x + bb.w + m, y1 = bb.y + bb.h + m
+    const q = Math.min(bb.w, bb.h) * 0.18
+    const pulse = 0.75 + 0.25 * Math.sin(w.time * 9)
+    c.lineWidth = 3 * u
+    c.strokeStyle = `rgba(255,70,60,${a * pulse})`
+    c.beginPath()
+    for (const [x, y, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+      c.moveTo(x, y + sy * q); c.lineTo(x, y); c.lineTo(x + sx * q, y)
+    }
+    c.stroke()
+    c.font = `600 ${15 * u}px ${T.fontHead}`
+    c.textAlign = 'left'
+    c.textBaseline = 'bottom'
+    c.letterSpacing = `${3 * u}px`
+    c.fillStyle = `rgba(255,120,100,${a})`
+    c.fillText(w.bossName.split(' — ')[0].toUpperCase(), x0, y0 - 6 * u)
+    c.letterSpacing = '0px'
+  }
+  c.restore()
+}
+
+/** Thin countdown along the top of the wide view: how long the open field lasts. */
+function drawWideTimer(c: CanvasRenderingContext2D, left: number, v: { x: number; y: number; w: number }, u: number, a: number) {
+  const bw = 260 * u, x = v.x + v.w / 2 - bw / 2, y = v.y + 16 * u
+  c.save()
+  c.globalAlpha = a
+  c.fillStyle = 'rgba(10,12,20,0.55)'
+  c.fillRect(x - 2 * u, y - 2 * u, bw + 4 * u, 8 * u)
+  c.fillStyle = left < 0.25 ? '#ff6a4a' : '#9fe6ff'
+  c.fillRect(x, y, bw * left, 4 * u)
+  c.font = `600 ${11 * u}px ${T.fontHead}`
+  c.textAlign = 'center'
+  c.textBaseline = 'top'
+  c.letterSpacing = `${3 * u}px`
+  c.fillStyle = 'rgba(220,240,255,0.85)'
+  c.fillText('WIDE FIELD', v.x + v.w / 2, y + 9 * u)
+  c.letterSpacing = '0px'
+  c.restore()
 }
 
 const spr = (k: string) => getSprite(k)
@@ -181,7 +326,11 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
   w.parts.drawAdd(c)
   drawSpecials(c, w)
 
-  if (bg) bg.drawOver(c)
+  if (bg) {
+    // atmosphere layers only cover the field; fade them while the view is wide so they don't outline it
+    const a = 1 - w.cam.wide
+    if (a > 0.01) { c.save(); c.globalAlpha = a; bg.drawOver(c); c.restore() }
+  }
 
   drawLasers(c, w)
   drawBullets(c, w)

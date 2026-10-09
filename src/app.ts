@@ -9,7 +9,8 @@ import { nextMissionId, missionIndex, applyResult } from './game/progress'
 import * as save from './game/save'
 import type { Settings, Records } from './game/save'
 import { Nav } from './ui/nav'
-import { arcadeStageScreen, arcadeOverScreen } from './ui/arcade-screens'
+import { arcadeStageScreen, arcadeOverScreen, levelUpModal } from './ui/arcade-screens'
+import { applyPerk } from './game/perks'
 import { newArcadeRun, type ArcadeRun } from './game/arcade'
 import { titleScreen, briefingScreen, pauseScreen, failedScreen, resultsScreen, endingScreen, settingsModal, difficultyModal } from './ui/screens'
 import { hangarScreen } from './ui/hangar'
@@ -341,6 +342,19 @@ export class App {
     this.screen?.update?.(dt)
 
     const s = this.session
+    // arcade level-up: freeze the run and show the cards
+    const lv = s?.world.arcade
+    if (lv?.pendingCards && !this.modal && s?.state === 'play') {
+      const cards = lv.pendingCards
+      this.paused = true
+      audio.sfx('special_ready')
+      this.openModal(levelUpModal(cards, lv.run.mods, lv.run.level, (id) => {
+        applyPerk(s.world, id)
+        lv.pendingCards = null
+        this.paused = false
+        this.closeModal()
+      }))
+    }
     if (s && this.screen?.backdrop === 'game') {
       if (!this.modal) input.clearMenu() // menu keys pressed while flying must not click the next screen
       if (input.pause && !wasPaused && s.state === 'play' && !this.modal) this.pause()

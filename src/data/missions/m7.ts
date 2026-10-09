@@ -61,7 +61,7 @@ registerEnemy({
   init(e) { e.armor = 0; e.s.open = 0; e.s.st = 0; e.s.t = rand(0.4, 1.6) },
   update(e, w, dt) {
     e.s.t -= dt
-    if (e.s.st === 0 && e.s.t <= 0 && onScreen(e, 60)) { e.s.st = 1; e.s.t = 0.7 }
+    if (e.s.st === 0 && e.s.t <= 0 && onScreen(w, e, 60)) { e.s.st = 1; e.s.t = 0.7 }
     else if (e.s.st === 1) {
       e.s.open = Math.min(1, e.s.open + dt / 0.7)
       if (e.s.t <= 0) { e.s.st = 2; e.s.t = 2.4; e.armor = 1 }
@@ -241,6 +241,8 @@ export const m7: MissionDef = {
     L.at(26.5).wave('cantor', 3, 0.5, F.hover(115, 8, X(0.2), X(0.8)))
     veins(L.at(27), [X(0.18), X(0.54), X(0.82)])
     L.at(30).gate(13)
+    L.at(30.1).horde([['dart', 10], ['cantor', 3], ['dart', 10], ['wasp', 8], ['dart', 10], ['cantor', 3]], { elite: true }).reveal({ banner: 'The Choir rises', play: true, hold: 7 })
+    L.at(30.15).gate(22)
     // ── echoes: the Choir sings back the whole campaign ──
     L.at(31).intensity(3).radio('CHOIR', 'WE KEPT EVERY SONG YOU SILENCED. HEAR THEM AGAIN.', 'enemy')
     L.at(33).radio('CHOIR', 'THE REFINERY SANG FIRST.', 'enemy')

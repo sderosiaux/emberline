@@ -417,6 +417,18 @@
     "item_point_e3.wav"
    ],
    "gain": 0.1156
+  },
+  "reveal_in": {
+   "files": [
+    "reveal_in_e1.wav"
+   ],
+   "gain": 0.1642
+  },
+  "reveal_out": {
+   "files": [
+    "reveal_out_e1.wav"
+   ],
+   "gain": 0.2092
   }
  },
  "loops": {

@@ -485,4 +485,6 @@ export const SFX: Record<SfxName, SfxDef> = {
   spell_capture: { ...BASE_SFX.secret, gap: 0.5 },
   item_power: { ...BASE_SFX.pickup_special, gap: 0.04, cap: 3 },
   item_point: { ...BASE_SFX.pickup_credit, gap: 0.025, cap: 4 },
+  reveal_out: { ...BASE_SFX.boss_warning, gap: 1 },
+  reveal_in: { ...BASE_SFX.special_phase, gap: 1 },
 }

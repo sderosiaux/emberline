@@ -164,8 +164,9 @@ export class Player {
     const acc = 5200
     this.vx = approach(this.vx, tvx, acc * dt)
     this.vy = approach(this.vy, tvy, acc * dt)
-    this.x = clamp(this.x + this.vx * dt, 18, PW - 18)
-    this.y = clamp(this.y + this.vy * dt, 30, PH - 22)
+    const B = w.bounds
+    this.x = clamp(this.x + this.vx * dt, B.x0 + 18, B.x1 - 18)
+    this.y = clamp(this.y + this.vy * dt, B.y0 + 30, B.y1 - 22)
     this.bank = approach(this.bank, clamp(this.vx / 400, -1, 1), dt * 9)
 
     // power

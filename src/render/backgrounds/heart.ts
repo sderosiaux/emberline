@@ -2,8 +2,7 @@
 import { clamp, rng, smoothstep } from '../../core/math'
 import {
   FH, FW, Fader, H, Scroller, TILE_H, TileSet, W, blit, cMix, cMul, cOut, cSet, cached, cachedSeeded, canvas, cloudSprite,
-  field, grid, hash3, lut, slope, softDot, tileNoise, upscale, wrapX, type Background, type Ctx, type Job,
-} from './kit'
+  field, grid, hash3, lut, slope, softDot, tileNoise, upscale, wrapX, type Background, type Ctx, type Job, fillFrame } from './kit'
 
 const FLESH = lut([[0, '#110b1f'], [0.35, '#1d1433'], [0.6, '#2c1f48'], [0.85, '#3e2d5c'], [1, '#54406e']])
 const TAU = Math.PI * 2
@@ -327,7 +326,7 @@ export function createHeart(seed = 1): Background {
       if (ce > 0) {
         ctx.globalCompositeOperation = 'multiply'
         ctx.fillStyle = `rgba(210,110,120,${ce * 0.45})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         // the core far below: a slow red throb rising out of the chasm
         ctx.globalCompositeOperation = 'screen'
         ctx.globalAlpha = ce * (0.3 + b * 0.35)
@@ -338,7 +337,7 @@ export function createHeart(seed = 1): Background {
         v.addColorStop(0, 'rgba(10,2,8,0)')
         v.addColorStop(1, `rgba(10,2,8,${ce * 0.6})`)
         ctx.fillStyle = v
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
       }
       if (co > 0) {
         for (const c of chunks) blit(ctx, tex.chunk, c.x, c.y, c.rot, c.s, co * 0.9)

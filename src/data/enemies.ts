@@ -168,7 +168,7 @@ def({
     for (const ox of [-40, 40]) w.spawn('carrier_turret', e.x + ox, e.y + 28, { parent: e, ox, oy: 28 })
   },
   update(e, w) {
-    if (onScreen(e, 20) && every(e, w, 'launch', e.elite ? 0.8 : 1.3, 0.1)) {
+    if (onScreen(w, e, 20) && every(e, w, 'launch', e.elite ? 0.8 : 1.3, 0.1)) {
       const d = w.spawn('dart', e.x, e.y + 40, { mover: new SeekMover(230, 2.2, 2.2) })
       d.vy = 200; d.vx = rand(-60, 60)
       d.s.shooter = 1
@@ -233,7 +233,7 @@ def({
     }
     if (e.s.armed) { e.s.t -= w.frameDt; e.flash = Math.sin(e.age * 50) > 0 ? 0.8 : 0; if (e.s.t <= 0) w.kill(e, false) }
   },
-  onDeath(e, w) { if (onScreen(e)) ring(w, e.x, e.y, e.elite ? 14 : 10, 160, Math.random()) },
+  onDeath(e, w) { if (onScreen(w, e)) ring(w, e.x, e.y, e.elite ? 14 : 10, 160, Math.random()) },
 })
 
 def({
@@ -433,7 +433,7 @@ def({
   id: 'radar', hp: 120, r: 18, sprite: 'radar', layer: 'ground', score: 400, credits: 50, charge: 5, explode: 'medium', target: true,
   update(e, w) {
     e.s.spin = (e.s.spin ?? 0) + w.frameDt * 2
-    if (onScreen(e, 40) && every(e, w, 'call', 5.5, 0.1)) {
+    if (onScreen(w, e, 40) && every(e, w, 'call', 5.5, 0.1)) {
       if (!w.preview && !e.s.called) { e.s.called = 1; w.emit({ type: 'radio', who: 'KESTREL', text: "Radar's painting me. Incoming interceptors!" }) }
       for (let i = 0; i < 3; i++) w.spawn('lancer', rand(60, PW - 60), -30 - i * 30)
     }
@@ -503,7 +503,7 @@ def({
   init(e) { e.armor = 0; e.visibleAlpha = 0.25; e.s.phase = 0; e.s.t = rand(0.5, 1.5) },
   update(e, w, dt) {
     e.s.t -= dt
-    if (e.s.phase === 0 && e.s.t <= 0 && onScreen(e, 60)) { e.s.phase = 1; e.s.t = 0.8 }
+    if (e.s.phase === 0 && e.s.t <= 0 && onScreen(w, e, 60)) { e.s.phase = 1; e.s.t = 0.8 }
     else if (e.s.phase === 1) {
       e.visibleAlpha = Math.min(1, e.visibleAlpha + dt * 1.2)
       if (Math.random() < 0.6) w.parts.spawn(P.Smoke, e.x + rand(-20, 20), e.y + rand(-10, 10), 0, 0, 0.6, 4, 10, C.ice, 0, true)
@@ -546,7 +546,7 @@ def({
 def({
   id: 'hangar', hp: 480, r: 30, sprite: 'hangar', layer: 'ground', score: 1000, credits: 120, charge: 10, explode: 'large', target: true,
   update(e, w) {
-    if (onScreen(e, 40) && e.y < PH * 0.7 && every(e, w, 'launch', 1.6, 0.1)) {
+    if (onScreen(w, e, 40) && e.y < PH * 0.7 && every(e, w, 'launch', 1.6, 0.1)) {
       const side = chance(0.5) ? -1 : 1
       w.spawn('wasp', e.x, e.y, {
         mover: new PathMover([[e.x, e.y], [e.x + side * 80, e.y - 60], [e.x + side * 200, e.y + 80], [e.x + side * 260, PH + 80]], 200),

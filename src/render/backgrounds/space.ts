@@ -1,6 +1,6 @@
 /** Shared pieces for the space biomes (shoals, graveyard, halo's far layer). */
 import { clamp, smoothstep } from '../../core/math'
-import { H, SeamNoise, TILE_H, W, cMix, cMul, cOut, cSet, drain, field, hash3, upscale, type Ctx } from './kit'
+import { H, SeamNoise, area, TILE_H, W, cMix, cMul, cOut, cSet, drain, field, hash3, upscale, type Ctx } from './kit'
 
 export interface NebulaStyle {
   base: Uint8Array
@@ -38,8 +38,9 @@ export class Parallax {
   update(dt: number, scroll: number) { this.pos += (scroll * this.factor + this.drift) * dt }
   draw(ctx: Ctx, alpha = 1) {
     const h = this.img.height
-    let y = Math.round(this.pos % h) - h
-    if (y > 0) y -= h
+    // side columns of a wide view get their own phase (kit `area`), so a flipped column doesn't mirror the sky
+    let y = Math.round((this.pos + area.shift) % h) - h
+    while (y > -area.top) y -= h
     ctx.globalAlpha = alpha
     for (; y < H; y += h) ctx.drawImage(this.img, 0, y)
     ctx.globalAlpha = 1

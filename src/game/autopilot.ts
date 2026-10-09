@@ -34,7 +34,7 @@ export function autopilot(skill = 1) {
     const speed = p.speed
     for (const [dx, dy] of dirs) {
       const nx = p.x + dx * speed * horizon, ny = p.y + dy * speed * horizon
-      if (nx < 20 || nx > PW - 20 || ny < PH * 0.45 || ny > PH - 30) continue
+      if (nx < w.bounds.x0 + 20 || nx > w.bounds.x1 - 20 || ny < PH * 0.45 || ny > PH - 30) continue
       let danger = 0
       for (const b of w.bullets.items) {
         if (!b.active) continue

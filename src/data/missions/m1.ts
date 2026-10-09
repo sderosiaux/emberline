@@ -82,6 +82,8 @@ export const m1: MissionDef = {
     L.at(22).wave('bomber', 1, 0, F.column(X(0.35), 60)).wave('bomber', 1, 0, F.column(X(0.68), 60))
       .wave('dart', 6, 0.12, F.vee(X(0.5), 90, 50, 20))
     L.at(24).gate(12)
+    L.at(24.1).horde([['dart', 9], ['dart', 8], ['wasp', 6], ['dart', 9], ['bomber', 2]]).reveal({ banner: 'Massed contacts', play: true, hold: 7 }).radio('HALLORAN', 'Kestrel, pull your scope out. That is not a patrol. That is a swarm.')
+    L.at(24.15).gate(20)
     // the ore train crosses the whole field
     L.at(25).radio('HALLORAN', 'Ore train on the east line. The cargo cars are full of refined credits. Were full.')
     row('prop_rail', -60)

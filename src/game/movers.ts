@@ -92,6 +92,37 @@ export class SineMover implements Mover {
   }
 }
 
+/**
+ * Massed formation member: the block descends together with a slight sway, and each
+ * craft peels off sideways once it reaches its row's break line, so the mass pours
+ * into the field and splits instead of stacking on top of the player.
+ */
+export class HordeMover implements Mover {
+  private t: number
+  private peeled = false
+  private vx = 0
+  private vy2 = 0
+  constructor(private baseX: number, private vy: number, private peelY: number, private side: -1 | 1, phase = 0) { this.t = phase }
+  update(e: Enemy, _w: World, dt: number) {
+    this.t += dt
+    if (!this.peeled) {
+      const nx = this.baseX + Math.sin(this.t * 1.3) * 14
+      e.vx = (nx - e.x) / Math.max(dt, 1e-4)
+      e.x = nx
+      e.vy = this.vy
+      e.y += this.vy * dt
+      e.rot = -e.vx * 0.002
+      if (e.y >= this.peelY) { this.peeled = true; this.vx = this.side * 40; this.vy2 = this.vy }
+      return
+    }
+    this.vx = clamp(this.vx + this.side * 420 * dt, -280, 280)
+    this.vy2 = Math.min(this.vy2 + 60 * dt, 150)
+    e.vx = this.vx; e.vy = this.vy2
+    e.x += this.vx * dt; e.y += this.vy2 * dt
+    e.rot = Math.atan2(this.vy2, this.vx) - Math.PI / 2
+  }
+}
+
 /** Fly to a station, hold (optionally drifting), then leave. */
 export class HoverMover implements Mover {
   private phase: 0 | 1 | 2 = 0

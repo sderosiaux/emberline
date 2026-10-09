@@ -7,6 +7,7 @@ import { angleDiff, clamp, rand, TAU } from '../core/math'
 import { P, C } from '../render/particles'
 import { explode, muzzle, sparks } from './fx'
 import { audio, type SfxName } from '../audio/audio'
+import { modShot, fireRateMul } from './perks'
 
 /** Behaviour tags interpreted on hit / expiry. */
 export const enum ShotKind { Normal, Bloom, Mine, Shatter, Chorus, Lantern, BloomShard, Flame }
@@ -42,6 +43,7 @@ export function shoot(w: World, x: number, y: number, ang: number, speed: number
   s.ricochet = o.ricochet ?? 0
   s.trail = o.trail ?? 0
   s.waveBaseX = x
+  if (w.arcade && o.count !== false) modShot(w, s)
   if (o.count !== false && !w.preview) w.stats.shotsFired++
   else s.counted = true // uncounted shots (shrapnel, pods' extras) must not count as hits either
   return s
@@ -132,7 +134,7 @@ export abstract class Gun {
   protected mirrors() { return this.p.pods.filter((q) => q.id === 'mirror') as MirrorPod[] }
 
   update(dt: number, firing: boolean) {
-    const rate = this.p.overclock > 0 ? 2 : 1
+    const rate = (this.p.overclock > 0 ? 2 : 1) * fireRateMul(this.w)
     if (!firing) { this.cd = Math.max(0, this.cd - dt * rate); return }
     this.cd -= dt * rate
     let guard = 0

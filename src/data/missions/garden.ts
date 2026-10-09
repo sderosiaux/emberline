@@ -97,7 +97,7 @@ registerEnemy({
   update(e, w, dt) {
     e.s.open = Math.max(0, e.s.open - dt)
     e.s.t -= dt * w.diff.fireRate
-    if (e.s.t > 0 || !onScreen(e, 20) || e.y > w.player.y - 60 || !w.player.alive) return
+    if (e.s.t > 0 || !onScreen(w, e, 20) || e.y > w.player.y - 60 || !w.player.alive) return
     e.s.t = 4.6
     e.s.open = 1.4
     const n = e.elite ? 12 : 9

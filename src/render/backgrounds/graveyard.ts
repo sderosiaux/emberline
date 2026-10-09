@@ -2,8 +2,7 @@
 import { rng } from '../../core/math'
 import {
   Fader, H, Scroller, TILE_H, TileSet, W, blit, cachedSeeded, canvas, cloudSprite, lut, softDot, starTile, wrapX,
-  type Background, type Job, type Pt,
-} from './kit'
+  type Background, type Job, type Pt, fillFrame } from './kit'
 import { wreck, type HullPal } from './motifs'
 import { Parallax, nebulaTile } from './space'
 
@@ -157,7 +156,7 @@ export function createGraveyard(seed = 1): Background {
       sun.addColorStop(0, 'rgba(170,230,210,0.28)')
       sun.addColorStop(1, 'rgba(170,230,210,0)')
       ctx.fillStyle = sun
-      ctx.fillRect(0, 0, W, H)
+      fillFrame(ctx)
       ctx.globalCompositeOperation = 'source-over'
       stars.draw(ctx)
       for (const h of hazes) blit(ctx, h.img, h.x, h.y, 0, 1.4, 0.26)
@@ -183,7 +182,7 @@ export function createGraveyard(seed = 1): Background {
         const b = 0.6 + 0.4 * Math.sin(t * 2.4)
         ctx.globalCompositeOperation = 'soft-light'
         ctx.fillStyle = `rgba(255,60,50,${aw * 0.35 * b})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         ctx.globalCompositeOperation = 'source-over'
       }
       ground.draw(ctx)

@@ -2,8 +2,7 @@
 import { rng } from '../../core/math'
 import {
   Fader, H, Scroller, TILE_H, TileSet, W, blit, cachedSeeded, canvas, cloudSprite, hex, lut, softDot, starTile,
-  wrapX, type Background, type Job,
-} from './kit'
+  wrapX, type Background, type Job, fillFrame } from './kit'
 import { rockSprite } from './motifs'
 import { Parallax, nebulaTile } from './space'
 
@@ -167,7 +166,7 @@ export function createShoals(seed = 1): Background {
       if (rf > 0) {
         ctx.globalCompositeOperation = 'soft-light'
         ctx.fillStyle = `rgba(150,100,255,${rf * 0.35})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         ctx.globalCompositeOperation = 'source-over'
       }
       ground.draw(ctx)

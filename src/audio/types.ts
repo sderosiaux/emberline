@@ -11,7 +11,7 @@ export type SfxName =
   | ArcadeSfx
 
 /** Arcade-mode sounds: sample-only, they reuse a nearby synth recipe as fallback. */
-export type ArcadeSfx = 'graze' | 'rift_enter' | 'rift_exit' | 'rift_ready' | 'bomb' | 'spell_declare' | 'spell_capture' | 'item_power' | 'item_point'
+export type ArcadeSfx = 'graze' | 'rift_enter' | 'rift_exit' | 'rift_ready' | 'bomb' | 'spell_declare' | 'spell_capture' | 'item_power' | 'item_point' | 'reveal_out' | 'reveal_in'
 
 export type LoopName = 'beam' | 'charge' | 'alarm'
 

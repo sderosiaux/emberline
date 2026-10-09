@@ -330,6 +330,8 @@ export const m6: MissionDef = {
       .ground('m6_wreck_gun', X(0.77), { y: -230 }).ground('m6_wreck_gun', X(0.84), { y: -180 })
     L.at(15.5).wave('dart', 7, 0.1, F.vee(X(0.5), 170))
     L.at(17).gate(12)
+    L.at(17.1).horde([['dart', 10], ['phantom', 4], ['dart', 10], ['weaver', 6]]).reveal({ banner: 'Massed contacts', play: true, hold: 7 }).radio('KESTREL', 'Wide scan sees them. My eyes do not. Some of those are cloaked.')
+    L.at(17.15).gate(20)
     // ── mines among the debris ──
     L.at(18).radio('HALLORAN', 'Mines drifting in the debris. Old ones, ours. Somebody re-armed them.')
       .wave('mine', 1, 0, drift(X(0.15), 50)).wave('mine', 1, 0, drift(X(0.38), 50)).wave('mine', 1, 0, drift(X(0.62), 50)).wave('mine', 1, 0, drift(X(0.85), 50))

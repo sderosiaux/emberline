@@ -136,6 +136,8 @@ export const m2: MissionDef = {
     L.at(24.5).ground('gunboat', PW + 30, { vx: -72, y: 120 }).ground('gunboat', PW + 90, { vx: -72, y: 130 }).ground('gunboat', -30, { vx: 72, y: 180 })
     L.at(26).wave('wasp', 6, 0.2, F.hover(145, 4.5))
     L.at(28.5).gate(12)
+    L.at(28.6).horde([['dart', 9], ['wasp', 7], ['dart', 9], ['weaver', 6], ['dart', 9]]).reveal({ banner: 'Massed contacts', play: true, hold: 7 }).radio('KESTREL', 'Halloran, the whole bay just lifted off at once.')
+    L.at(28.65).gate(20)
     // minefield between the buoys
     L.at(29.5).decor('prop_buoy', X(0.12), { y: -40 }).decor('prop_buoy', X(0.88), { y: -40 })
       .wave('mine', 10, 0.32, (i) => {

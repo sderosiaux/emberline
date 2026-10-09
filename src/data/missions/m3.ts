@@ -136,6 +136,8 @@ export const m3: MissionDef = {
     L.at(16.5).wave('weaver', 5, 0.4, F.sine(X(0.2), 90, 2.3, 130)).wave('weaver', 5, 0.4, F.sine(X(0.8), 90, 2.3, 130))
     L.at(19).wave('dart', 8, 0.18, F.swoop(1, 0.38, 290)).ground('cache', X(0.08), { y: -40 })
     L.at(21.5).gate(12)
+    L.at(21.6).horde([['dart', 10], ['wasp', 7], ['dart', 10], ['missileer', 3], ['wasp', 7]]).reveal({ banner: 'Massed contacts', play: true, hold: 7 }).radio('HALLORAN', 'Wide scan. Count them later, shoot them now.')
+    L.at(21.65).gate(20)
     L.at(22.5).do((w) => tankColumn(w, X(0.2), 4)).ground('artillery', X(0.78), { y: -60 }).decor('prop_antenna', X(0.86), { y: -120 })
     L.at(24).wave('bomber', 1, 0, F.column(X(0.6), 60)).wave('dart', 6, 0.12, F.vee(X(0.6), 70, 50, 20))
       .wave('wasp', 5, 0.2, F.swoop(-1, 0.35, 290))

@@ -1,8 +1,7 @@
 /** Secret level — a pastel dreamscape: perspective grid, geometric flowers, soft static. */
 import { rng } from '../../core/math'
 import {
-  Fader, H, Scroller, TILE_H, TileSet, W, blit, cached, cachedSeeded, canvas, cloudSprite, hex, type Background, type Ctx, type Job,
-} from './kit'
+  Fader, H, Scroller, TILE_H, TileSet, W, blit, cached, cachedSeeded, canvas, cloudSprite, hex, type Background, type Ctx, type Job, fillFrame } from './kit'
 
 const TAU = Math.PI * 2
 export const PETALS = ['#f4b6c8', '#c7b3f2', '#a9e3cf', '#f7d9a8', '#a8d2f2', '#f0c4e8']
@@ -165,7 +164,7 @@ export function createGarden(seed = 1): Background {
       g.addColorStop(0, mix(ta, tc))
       g.addColorStop(1, mix(tb, td))
       ctx.fillStyle = g
-      ctx.fillRect(0, 0, W, H)
+      fillFrame(ctx)
       blit(ctx, tex.sun, W / 2, 30 + Math.sin(t * 0.3) * 6, 0, 1, 0.55)
       for (const b of blobs) blit(ctx, b.img, b.x, b.y, 0, 1.3, 0.45)
       drawGrid(ctx, gpos)

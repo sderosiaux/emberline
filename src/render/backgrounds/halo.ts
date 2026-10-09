@@ -2,8 +2,7 @@
 import { clamp, rng } from '../../core/math'
 import {
   Fader, H, Scroller, SeamNoise, TILE_H, TileSet, W, cachedSeeded, canvas, field, lut, softDot,
-  starTile, type Background, type Ctx, type Job,
-} from './kit'
+  starTile, type Background, type Ctx, type Job, fillFrame } from './kit'
 import { Parallax, nebulaTile } from './space'
 
 const PLANET = lut([[0, '#0c2238'], [0.45, '#17405e'], [0.7, '#2c6680'], [1, '#6f9fb2']])
@@ -239,7 +238,7 @@ export function createHalo(seed = 1): Background {
       const it = interior.e
       // far: planet below, its limb curving away into space on the right
       ctx.fillStyle = '#05070f'
-      ctx.fillRect(0, 0, W, H)
+      fillFrame(ctx)
       stars.draw(ctx, 0.8)
       ctx.save()
       ctx.beginPath()
@@ -250,7 +249,7 @@ export function createHalo(seed = 1): Background {
       shade.addColorStop(0, 'rgba(0,0,0,0)')
       shade.addColorStop(1, 'rgba(0,8,20,0.55)')
       ctx.fillStyle = shade
-      ctx.fillRect(0, 0, W, H)
+      fillFrame(ctx)
       ctx.restore()
       ctx.drawImage(tex.limb, 0, 0)
       ground.draw(ctx)
@@ -268,7 +267,7 @@ export function createHalo(seed = 1): Background {
         // enclosed dock: dim everything, warm sodium pools, dark side walls
         ctx.globalCompositeOperation = 'multiply'
         ctx.fillStyle = `rgba(70,62,78,${it * 0.8})`
-        ctx.fillRect(0, 0, W, H)
+        fillFrame(ctx)
         ctx.globalCompositeOperation = 'lighter'
         const off = (ground.pos * 1.0) % 240
         for (let y = -240 + off; y < H + 120; y += 240)

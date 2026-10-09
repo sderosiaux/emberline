@@ -96,12 +96,12 @@ export class Session {
           audio.duck(0.6, 1.2)
           break
         }
-        case 'banner': this.hud.banner = { text: ev.text, sub: ev.sub, t: w.time }; break
+        case 'banner': this.hud.banner = { text: ev.text, sub: ev.sub, low: ev.low, t: w.time }; break
         case 'phase': this.bg.setPhase(ev.name); break
         case 'secret': this.hud.secretToast = { text: ev.text, t: w.time }; break
         case 'core': this.hud.secretToast = { text: `Data core recovered: ${coreName(ev.id)}`, t: w.time }; break
         case 'boss':
-          this.hud.banner = { text: 'Warning', sub: ev.name, t: w.time }
+          this.hud.banner = { text: 'Warning', sub: ev.name, low: w.cam.busy, t: w.time }
           audio.sfx('boss_warning')
           break
         case 'bossDown': break

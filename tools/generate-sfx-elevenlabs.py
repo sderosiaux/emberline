@@ -89,10 +89,14 @@ S.update({
   'spell_capture': ('Bonus captured, triumphant sparkling arpeggio chime with coins, short reward stinger', 2.0, 1, 1.8),
   'item_power': ('Power-up item collected, quick bright rising blip with a crunchy edge', 0.5, 2, 0.2),
   'item_point': ('Point item collected, small crystal tink, very short and light', 0.5, 3, 0.12),
+  # strategic camera pull-back
+  'reveal_out': ('Cinematic camera pulling back to reveal a huge enemy fleet, deep rising sub whoosh with a tactical radar ping and a low ominous brass swell', 2.0, 1, 1.8),
+  'reveal_in': ('Camera diving back into the action, fast descending air whoosh ending in a tight punchy thump', 1.0, 1, 0.8),
 })
 # arcade sounds borrow the level of the closest existing sound so they slot into the mix
 REF = {'graze': 'hit_small', 'item_power': 'pickup_special', 'item_point': 'pickup_credit', 'rift_enter': 'special_phase',
-       'rift_exit': 'special_phase', 'rift_ready': 'special_ready', 'bomb': 'special_nova', 'spell_declare': 'boss_phase', 'spell_capture': 'secret'}
+       'rift_exit': 'special_phase', 'rift_ready': 'special_ready', 'bomb': 'special_nova', 'spell_declare': 'boss_phase', 'spell_capture': 'secret',
+       'reveal_out': 'boss_warning', 'reveal_in': 'special_phase'}
 
 LOOPS = {
   'beam': ('Continuous powerful energy beam hum, sustained searing laser drone, seamless loop', 3.0),

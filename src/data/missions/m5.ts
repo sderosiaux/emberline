@@ -150,6 +150,8 @@ export const m5: MissionDef = {
     L.at(10).ground('silo', X(0.68)).ground('silo', X(0.8), { y: -80 }).wave('missileer', 3, 0.5, F.hover(120, 6, X(0.2), X(0.8)))
     L.at(12.5).wave('dart', 9, 0.14, F.swoop(1, 0.5, 320)).wave('dart', 9, 0.14, F.swoop(-1, 0.45, 320))
     L.at(15).gate(12)
+    L.at(15.1).horde([['dart', 10], ['wasp', 8], ['dart', 10], ['missileer', 4], ['dart', 10], ['bomber', 2]]).reveal({ banner: 'Dock garrison launching', play: true, hold: 7 }).radio('HALLORAN', 'Every launch rail on the dock just fired. Hold the line, Kestrel.')
+    L.at(15.15).gate(20)
 
     // ── laser gates ──
     L.at(16.5).radio('KESTREL', 'Laser gate. It blinks. I can count.')

@@ -1,7 +1,8 @@
 import type { World } from './world'
 import type { Enemy } from './entities'
 import type { Mover } from './movers'
-import { PathMover, LineMover, SineMover, HoverMover, GroundMover, SeekMover } from './movers'
+import { PathMover, LineMover, SineMover, HoverMover, GroundMover, SeekMover, HordeMover } from './movers'
+import type { RevealOpts } from './camera'
 import { PW, PH } from './consts'
 import type { BiomeId } from '../render/backgrounds'
 import type { TrackId } from '../audio/audio'
@@ -20,7 +21,7 @@ export interface MissionDef {
   script(L: LevelScript): void
 }
 
-type Step = { t: number; fn: (w: World) => void; gate?: 'air' | 'boss' | 'flag'; flag?: string; timeout?: number }
+type Step = { t: number; fn: (w: World) => void; gate?: 'air' | 'boss' | 'flag'; flag?: string; timeout?: number; mark?: 'reveal' }
 
 /** Where a formation member starts and how it moves. */
 export interface Slot { x: number; y: number; mover: Mover | null }
@@ -81,6 +82,19 @@ export class LevelScript {
   banner(text: string, sub?: string) { return this.do((w) => w.emit({ type: 'banner', text, sub })) }
   phase(name: string) { return this.do((w) => w.events.push({ type: 'phase', name })) }
   intensity(level: 0 | 1 | 2 | 3) { return this.do((w) => { if (!w.preview) audio.music.setIntensity(level) }) }
+  /** Strategic pull-back: show what is massing above the field, then push back in. */
+  reveal(o: RevealOpts & { banner?: string } = {}) { this.steps.push({ t: this.t, fn: (w) => w.reveal(o), mark: 'reveal' }); return this }
+
+  /**
+   * A massed formation staged far above the field (only visible on a pull-back), rows
+   * listed front to back: `[enemyId, count]`. Pair with `reveal()` and a `gate()`.
+   */
+  horde(rows: [string, number][], o: { vy?: number; x0?: number; x1?: number; gap?: number; elite?: boolean } = {}) {
+    const gap = o.gap ?? 54
+    rows.forEach(([id, n], r) => this.wave(id, n, 0, F.horde(r, o.vy ?? 75, gap, o.x0, o.x1), { elite: o.elite }))
+    return this
+  }
+
   scroll(speed: number, over = 2) {
     return this.do((w) => {
       const from = w.scroll, t0 = w.time
@@ -188,4 +202,10 @@ export const F = {
   self: (x: number, y = -30): Formation => () => ({ x, y, mover: null }),
   spreadSelf: (x0: number, x1: number, y = -30): Formation => (i, n) => ({ x: n === 1 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / (n - 1), y, mover: null }),
   offsetPath: (pts: Pt[], dx: number, dy: number, speed = 220) => F.path(off(pts, dx, dy), speed),
+  /** Row `row` of a massed block staged above the field; members peel off left/right of centre. */
+  horde: (row: number, vy = 75, gap = 54, x0 = 70, x1 = PW - 70): Formation => (i, n) => {
+    const x = n === 1 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / (n - 1) + (row % 2 ? 16 : -16)
+    const side = x < PW / 2 ? -1 : 1
+    return { x, y: -150 - row * gap, mover: new HordeMover(x, vy, 110 + (row % 3) * 55 + Math.abs(x - PW / 2) * 0.12, side, row * 0.7 + i * 0.25) }
+  },
 }

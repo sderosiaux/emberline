@@ -19,6 +19,7 @@ export function installDebug(app: App) {
       case 'F2': if (app.arcade) { app.arcade.lives = 99; app.arcade.bombs = 99; console.log('arcade: 99 lives / 99 bombs') } else if (app.campaign) { app.campaign.credits += 10000; save.saveCampaign(app.campaign); if (app.screen?.backdrop === 'paper') app.toHangar() } break
       case 'F3': if (w()) for (const en of w()!.enemies) if (!en.bossPart) w()!.kill(en) ; break
       case 'F4': if (s) skipToBoss(app) ; break
+      case 'F5': if (s) skipToReveal(app); break
       case 'F6': app.slowmo = app.slowmo === 1 ? 0.25 : 1; break
       case 'F7': app.renderer.showHitboxes = !app.renderer.showHitboxes; break
       case 'F8': if (s) s.hud.showFps = !s.hud.showFps; break
@@ -68,10 +69,12 @@ export function installDebug(app: App) {
       }
     },
     skipToBoss: () => skipToBoss(app),
+    skipToReveal: () => skipToReveal(app),
+    reveal: (zoom = 0.55, hold = 2) => app.session?.world.reveal({ zoom, hold }),
     missionsAll: () => Object.keys(MISSIONS),
   }
   ;(window as unknown as { __emb: typeof api }).__emb = api
-  console.info('[emberline] debug enabled: F1 god · F2 +10k · F3 kill all · F4 boss · F6 slowmo · F7 hitboxes · F8 fps · F9 +front lvl · F10 win')
+  console.info('[emberline] debug enabled: F1 god · F2 +10k · F3 kill all · F4 boss · F5 next pull-back · F6 slowmo · F7 hitboxes · F8 fps · F9 +front lvl · F10 win')
 }
 
 function skipToBoss(app: App) {
@@ -89,4 +92,20 @@ function skipToBoss(app: App) {
   r.t = target - 3
   for (const e of s.world.enemies) e.gone = true
   s.world.scroll = 0
+}
+
+/** Jump to the next scripted pull-back (horde reveal), keeping the spawns staged with it. */
+function skipToReveal(app: App) {
+  const s = app.session
+  if (!s) return
+  const r = s.runner as unknown as { i: number; t: number }
+  const steps = s.runner.L.steps
+  const k = steps.findIndex((st, j) => j >= r.i && st.mark === 'reveal')
+  if (k < 0) return
+  const t = steps[k].t
+  let i = r.i
+  while (i < steps.length && steps[i].t < t - 0.01) i++
+  r.i = i
+  r.t = t
+  for (const e of s.world.enemies) if (!e.bossPart) e.gone = true
 }

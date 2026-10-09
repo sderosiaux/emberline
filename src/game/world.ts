@@ -8,6 +8,7 @@ import { Player } from './player'
 import type { Difficulty, Loadout } from './campaign'
 import { rand, TAU, clamp } from '../core/math'
 import { audio } from '../audio/audio'
+import { Camera, type RevealOpts } from './camera'
 
 export interface MissionStats {
   kills: number
@@ -28,7 +29,7 @@ export interface MissionStats {
 
 export type GameEvent =
   | { type: 'radio'; who: string; text: string; tone?: 'ally' | 'enemy' | 'odd' }
-  | { type: 'banner'; text: string; sub?: string }
+  | { type: 'banner'; text: string; sub?: string; low?: boolean }
   | { type: 'secret'; id: string; text: string }
   | { type: 'core'; id: string }
   | { type: 'boss'; name: string }
@@ -80,8 +81,10 @@ export interface Decor {
 type Timer = { t: number; fn: () => void }
 
 const GRID = 80
-const GCOLS = Math.ceil((PW + 240) / GRID)
-const GROWS = Math.ceil((PH + 400) / GRID)
+// covers the widest playable pull-back (zoom 0.42) plus spawn margins
+const GX = 720, GY = 900
+const GCOLS = Math.ceil((PW + 2 * GX) / GRID)
+const GROWS = Math.ceil((PH + GY + 200) / GRID)
 
 export class World {
   time = 0
@@ -109,6 +112,10 @@ export class World {
   shakeScale = 1
   flashScreen = 0
   hitstop = 0
+  /** Strategic pull-back camera (render-only, plus enemies holding fire while wide). */
+  cam = new Camera()
+  /** Playfield rectangle: the field itself, or the whole view during a playable pull-back. */
+  bounds = { x0: 0, y0: 0, x1: PW, y1: PH }
   score = 0
   chain = 0
   chainTimer = 0
@@ -262,6 +269,7 @@ export class World {
     const d = dmg * e.armor * (this.arcade?.inRift ? ARCADE.riftDamage : 1)
     e.hp -= d
     e.flash = e.maxHp > 400 ? Math.max(e.flash, 0.45) : 1
+    if (this.arcade) perkOnHit(this, e)
     e.hitThisFrame = true
     if (!quiet) {
       if (Math.random() < 0.5) hitSpark(this, hx, hy, e.layer === 'ground' ? C.orange : C.yellow)
@@ -323,7 +331,27 @@ export class World {
 
   // ───────────── update ─────────────
 
+  /** Pull the camera back to show what's massing above the field (no-op in previews). */
+  reveal(o: RevealOpts & { banner?: string } = {}) {
+    if (this.preview) return
+    // frame the furthest staged contact unless the script asks for a specific zoom
+    const staged = this.enemies.filter((e) => !e.dead && !e.gone && !e.hidden && e.y < 0)
+    const top = Math.min(0, ...staged.map((e) => e.y - e.r * e.scale)) - 60
+    this.cam.reveal({ ...o, zoom: o.zoom ?? clamp(PH / (PH - top), 0.42, 0.8) })
+    audio.sfx('reveal_out')
+    this.after((o.out ?? 0.9) + (o.hold ?? 2) - 0.25, () => audio.sfx('reveal_in'))
+    if (o.banner) {
+      const n = staged.length
+      this.emit({ type: 'banner', text: o.banner, sub: n > 1 ? `${n} contacts` : undefined, low: true })
+    }
+  }
+
   update(dt: number) {
+    // the ship is herded back in as the playable view shrinks: grace it through that
+    if (this.cam.update(dt) === 'back' && this.cam.play) this.player.invuln = Math.max(this.player.invuln, 1.6)
+    const b = this.bounds
+    if (this.cam.playing) { const v = this.cam.view(); b.x0 = v.x; b.y0 = v.y; b.x1 = v.x + v.w; b.y1 = v.y + v.h }
+    else { b.x0 = 0; b.y0 = 0; b.x1 = PW; b.y1 = PH }
     if (this.hitstop > 0) { this.hitstop -= dt; dt *= 0.15 }
     this.frameDt = dt
     this.time += dt
@@ -390,9 +418,10 @@ export class World {
       } else s.x += s.vx * dt
       s.y += s.vy * dt
       s.rot += s.spin * dt
-      if (s.ricochet > 0 && (s.x < 4 || s.x > PW - 4)) { s.vx = -s.vx; s.ricochet--; s.x = clamp(s.x, 4, PW - 4) }
+      const B = this.bounds
+      if (s.ricochet > 0 && (s.x < B.x0 + 4 || s.x > B.x1 - 4)) { s.vx = -s.vx; s.ricochet--; s.x = clamp(s.x, B.x0 + 4, B.x1 - 4) }
       if (s.trail && Math.random() < s.trail) this.parts.spawn(P.Glow, s.x, s.y, 0, 0, 0.18, 4, 1, C.orange)
-      if (s.y < -40 || s.y > PH + 40 || s.x < -40 || s.x > PW + 40) { this.shots.kill(s) }
+      if (s.y < B.y0 - 40 || s.y > B.y1 + 40 || s.x < B.x0 - 40 || s.x > B.x1 + 40) { this.shots.kill(s) }
     }
   }
 
@@ -421,12 +450,13 @@ export class World {
       e.def.update?.(e, this, dt)
       if (e.s.burn) tickBurn(this, e, dt)
       if (e.cd > 0) e.cd -= dt * this.diff.fireRate
-      const on = e.y > -e.r && e.y < PH + e.r && e.x > -e.r && e.x < PW + e.r
+      const B = this.bounds
+      const on = e.y > B.y0 - e.r && e.y < B.y1 + e.r && e.x > B.x0 - e.r && e.x < B.x1 + e.r
       if (on) e.wasOnScreen = true
       if (!e.noCull && !e.parent) {
         // Side exits only count once the unit has been seen (or has loitered too long), so side-entering convoys survive their approach.
-        const sideOff = (e.wasOnScreen || e.age > 15) && (e.x < -140 - e.r || e.x > PW + 140 + e.r)
-        const off = e.y > PH + 90 + e.r || sideOff || (e.wasOnScreen && e.y < -120 - e.r) || e.y < -900 || e.x < -1200 || e.x > PW + 1200
+        const sideOff = (e.wasOnScreen || e.age > 15) && (e.x < B.x0 - 140 - e.r || e.x > B.x1 + 140 + e.r)
+        const off = e.y > B.y1 + 90 + e.r || sideOff || (e.wasOnScreen && e.y < B.y0 - 120 - e.r) || e.y < -900 || e.x < -1200 || e.x > PW + 1200
         if (off) e.gone = true
       }
     }
@@ -487,7 +517,8 @@ export class World {
       }
       b.x += b.vx * dt; b.y += b.vy * dt
       if (b.kind === BulletKind.Missile && Math.random() < 0.5) this.parts.spawn(P.Smoke, b.x - b.vx * 0.03, b.y - b.vy * 0.03, 0, 0, 0.5, 3, 7, C.smokeLight, 0)
-      if (b.x < -60 || b.x > PW + 60 || b.y < -80 || b.y > PH + 60) { this.bullets.kill(b); continue }
+      const B = this.bounds
+      if (b.x < B.x0 - 60 || b.x > B.x1 + 60 || b.y < B.y0 - 80 || b.y > B.y1 + 60) { this.bullets.kill(b); continue }
       if (b.age < b.arm) continue
       if (p.alive && this.arcade) {
         const dx = b.x - p.x, dy = b.y - p.y
@@ -610,11 +641,13 @@ export class World {
       if (p.alive && k.kind !== PickupKind.Weapon && (k.magnet || d2 < mag * mag)) {
         k.magnet = true
         const d = Math.sqrt(d2) || 1
-        const sp = 520 + k.age * 200
-        k.vx += (dx / d) * sp * dt * 8
-        k.vy += (dy / d) * sp * dt * 8
-        const v = Math.hypot(k.vx, k.vy)
-        if (v > sp) { k.vx *= sp / v; k.vy *= sp / v }
+        // steer the velocity itself toward the ship: sideways drift dies out instead of turning into an orbit
+        const sp = 520 + Math.min(k.age, 3) * 200
+        const t = Math.min(1, dt * 14)
+        k.vx += ((dx / d) * sp - k.vx) * t
+        k.vy += ((dy / d) * sp - k.vy) * t
+        // fast items can cross the pickup radius between two frames: collect if this step reaches the ship
+        if (p.alive && Math.hypot(k.vx, k.vy) * dt >= d - (p.bodyR + 12)) { this.collect(k); continue }
       } else {
         k.vx *= Math.exp(-3 * dt)
         k.vy += (this.scroll * 1.2 - k.vy) * Math.min(1, dt * 2)
@@ -692,7 +725,7 @@ export class World {
   nearest(x: number, y: number, maxD: number, pred?: (e: Enemy) => boolean): Enemy | null {
     let best: Enemy | null = null, bd = maxD * maxD
     for (const e of this.enemies) {
-      if (e.dead || e.hidden || e.s.civilian || e.s.cloak || e.armor <= 0 || this.isShielded(e) || e.y < -20 || e.y > PH + 10 || e.x < -10 || e.x > PW + 10) continue
+      if (e.dead || e.hidden || e.s.civilian || e.s.cloak || e.armor <= 0 || this.isShielded(e) || e.y < this.bounds.y0 - 20 || e.y > this.bounds.y1 + 10 || e.x < this.bounds.x0 - 10 || e.x > this.bounds.x1 + 10) continue
       if (pred && !pred(e)) continue
       const d = (e.x - x) ** 2 + (e.y - y) ** 2
       if (d < bd) { bd = d; best = e }
@@ -718,9 +751,10 @@ export const BULLET_R: Record<BulletKind, number> = {
   [BulletKind.Bomb]: 7, [BulletKind.Ring]: 5, [BulletKind.Shard]: 3.5, [BulletKind.Mine]: 7, [BulletKind.Wave]: 6,
 }
 
-const cellX = (x: number) => clamp(Math.floor((x + 120) / GRID), 0, GCOLS - 1)
-const cellY = (y: number) => clamp(Math.floor((y + 200) / GRID), 0, GROWS - 1)
+const cellX = (x: number) => clamp(Math.floor((x + GX) / GRID), 0, GCOLS - 1)
+const cellY = (y: number) => clamp(Math.floor((y + GY) / GRID), 0, GROWS - 1)
 
 // late imports to avoid cycles at module-eval time
 import { onShotExpire, onShotHit, steerShot, ShotKind, tickBurn } from './weapons'
 import { Arcade, ARCADE } from './arcade'
+import { onHit as perkOnHit } from './perks'

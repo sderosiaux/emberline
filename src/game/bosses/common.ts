@@ -5,7 +5,8 @@ import { registerEnemy } from '../../data/enemies'
 import { chainExplosion, explode } from '../fx'
 import { audio } from '../../audio/audio'
 import { PickupKind } from '../entities'
-import { rand } from '../../core/math'
+import { rand, clamp } from '../../core/math'
+import { PH } from '../consts'
 import { P, C } from '../../render/particles'
 
 /** Register a boss-only enemy definition (defaults suited for boss parts). */
@@ -36,6 +37,9 @@ export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], f
   w.bossParts = [root, ...parts]
   for (const e of w.bossParts) { e.bossPart = true; e.noCull = true }
   root.s.ignoreGate = 1
+  // pull back far enough to frame the whole boss as it arrives from above the field
+  const top = Math.min(bossBounds(w).y, root.y - 140) - 70
+  w.reveal({ zoom: clamp(PH / (PH - top), 0.4, 0.66) * (finalBoss ? 0.88 : 1), hold: finalBoss ? 2.6 : 1.8, out: finalBoss ? 1.3 : 0.9 })
   w.emit({ type: 'boss', name })
   w.arcade?.nextSpell(w)
   if (!w.preview) audio.music.play(finalBoss ? 'final_boss' : 'boss', { fade: 1 })
@@ -58,6 +62,17 @@ export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], f
       ww.emit({ type: 'bossDown' })
     })
   }
+}
+
+/** World-space box around every living boss part (sprites overhang their hit radius). */
+export function bossBounds(w: World) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  for (const p of w.bossParts) {
+    if (p.dead || p.gone || p.x < -2000) continue
+    const r = p.r * p.scale * 1.35
+    x0 = Math.min(x0, p.x - r); y0 = Math.min(y0, p.y - r); x1 = Math.max(x1, p.x + r); y1 = Math.max(y1, p.y + r)
+  }
+  return x0 === Infinity ? { x: 0, y: 0, w: 0, h: 0 } : { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
 /** Part destroyed: crunchy feedback + boss-part sound. */

@@ -89,3 +89,35 @@ describe('arcade weapon capsules', () => {
     expect(w.player.front.level).toBe(1 + Math.floor(2 * 1.75))
   })
 })
+
+import { rollCards, applyPerk, PERK } from '../src/game/perks'
+
+describe('arcade level-up cards', () => {
+  it('offers three distinct cards that can still be ranked up', () => {
+    const cards = rollCards({ overcharge: 3 })
+    expect(cards).toHaveLength(3)
+    expect(new Set(cards.map((c) => c.id)).size).toBe(3)
+    expect(cards.some((c) => c.id === 'overcharge')).toBe(false)
+  })
+
+  it('XP from kills and grazes triggers a level-up with cards', () => {
+    const w = mk(), a = w.arcade!
+    a.gainXp(a.run.xpNext)
+    expect(a.pendingCards?.length).toBe(3)
+    expect(a.run.level).toBe(2)
+  })
+
+  it('cards change the ship: pierce, damage, bombs, lives', () => {
+    const w = mk(), a = w.arcade!
+    for (const id of ['pierce', 'overcharge', 'echo', 'secondwind']) applyPerk(w, id)
+    expect(a.run.bombs).toBe(4)
+    expect(a.run.lives).toBe(4)
+    a.run.power = 0
+    w.player.ai = () => ({ mx: 0, my: 0, fire: true, special: false })
+    step(w, 0.2)
+    const s = w.shots.items.find((x) => x.active)!
+    expect(s.pierce).toBeGreaterThanOrEqual(1)
+    expect(s.dmg).toBeGreaterThan(7)
+    expect(PERK.secondwind.max).toBe(1)
+  })
+})

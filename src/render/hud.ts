@@ -5,12 +5,14 @@ import { T } from '../ui/theme'
 import { PW, PH, HUD_X, HUD_W, SCREEN_H } from '../game/consts'
 import { clamp } from '../core/math'
 import { ARCADE_WEAPONS } from '../game/arcade'
+import { PERK } from '../game/perks'
 
 export interface RadioLine { who: string; text: string; tone: 'ally' | 'enemy' | 'odd'; t: number }
 export interface HudState {
   mission: MissionDef
   radio: RadioLine[]
-  banner: { text: string; sub?: string; t: number } | null
+  /** `low`: drawn under the action, for pull-backs where the middle of the screen is the point. */
+  banner: { text: string; sub?: string; low?: boolean; t: number } | null
   progress: number
   bank: number
   fps: number
@@ -313,12 +315,12 @@ function drawBossBar(c: CanvasRenderingContext2D, w: World) {
   c.fillRect(x, y + 13, bw * k, 4)
 }
 
-function drawBanner(c: CanvasRenderingContext2D, b: { text: string; sub?: string; t: number }, time: number) {
+function drawBanner(c: CanvasRenderingContext2D, b: { text: string; sub?: string; low?: boolean; t: number }, time: number) {
   const age = time - b.t
   const dur = 2.6
   if (age > dur || !b.text) return
   const a = age < 0.2 ? age / 0.2 : age > dur - 0.4 ? (dur - age) / 0.4 : 1
-  const y = PH * 0.34
+  const y = PH * (b.low ? 0.7 : 0.34)
   const slide = age < 0.25 ? (1 - age / 0.25) ** 3 * 60 : 0
   c.globalAlpha = a
   const hgt = b.sub ? 58 : 42
@@ -390,6 +392,19 @@ function drawArcadeHud(c: CanvasRenderingContext2D, w: World, h: HudState) {
   y += 40
   c.fillStyle = H.line; c.fillRect(x0, y - 12, bw, 1)
   label(c, 'Spells', x0, y); mono(c, `${run.captured} / ${run.spells}`, xr, y + 1, 11, H.text, 'right')
+  y += 28
+  label(c, `Level ${run.level}`, x0, y, '#ffd27a')
+  bar(c, x0, y + 6, bw, 5, run.xp / run.xpNext, '#ffd27a')
+  y += 26
+  for (const [id, r] of Object.entries(run.mods)) {
+    if (y > SCREEN_H - 60) break
+    c.font = `600 11px ${T.fontHead}`
+    c.fillStyle = H.text
+    c.textAlign = 'left'
+    c.fillText(PERK[id].name, x0, y)
+    pips(c, xr - PERK[id].max * 6 + 2, y - 6, r, PERK[id].max)
+    y += 16
+  }
   // controls reminder: the mode adds two verbs
   label(c, 'Shift focus · X bomb · C rift', x0, SCREEN_H - 34, H.faint, 8)
   label(c, 'Esc pause', x0, SCREEN_H - 14, H.faint, 8)
