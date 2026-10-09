@@ -113,10 +113,10 @@ bossDef({
 bossDef({
   id: 'm6_rev_engine', hp: 1800, r: 22, scale: S, sprite: 'm6_rev_engine', explode: 'large', score: 4000,
   update(e, w) {
-    if (e.parent!.s.intro || e.parent!.s.dying) return
+    if (e.parent!.s.intro || e.parent!.s.dying || w.raid.stunT > 0) return
     if (Math.random() < 0.7) w.parts.spawn(P.Smoke, e.x + rand(-8, 8), e.y - 34 * S, rand(-10, 10), -110, 0.45, 6, 16, C.violet, 0.5)
     if (!canFire(w, e)) return
-    e.s.t = (e.s.t ?? (e.ox < 0 ? 1.2 : 3.2)) - w.frameDt * w.diff.fireRate
+    e.s.t = (e.s.t ?? (e.ox < 0 ? 1.2 : 3.2)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) {
       e.s.t = 3.4
       // stern flak: slow heavy orbs raining down with wide gaps
@@ -130,8 +130,8 @@ bossDef({
   id: 'm6_rev_missile', hp: 1400, r: 20, scale: S, sprite: 'm6_rev_missile', explode: 'large', score: 3000,
   update(e, w) {
     const root = e.parent!
-    if (root.s.intro || root.s.dying) return
-    e.s.t = (e.s.t ?? (e.ox < 0 ? 2 : 4.5)) - w.frameDt * w.diff.fireRate
+    if (root.s.intro || root.s.dying || w.raid.stunT > 0) return
+    e.s.t = (e.s.t ?? (e.ox < 0 ? 2 : 4.5)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) {
       e.s.t = root.s.phase === 3 ? 4.2 : 5.6
       const side = e.ox < 0 ? -1 : 1
@@ -146,8 +146,8 @@ bossDef({
   id: 'm6_rev_plate', hp: 700, r: 22, scale: S, sprite: 'm6_rev_plate', explode: 'medium', score: 2000,
   update(e, w) {
     const root = e.parent!
-    if (root.s.intro || root.s.dying || !canFire(w, e)) return
-    e.s.t = (e.s.t ?? rand(1, 3)) - w.frameDt * w.diff.fireRate
+    if (root.s.intro || root.s.dying || w.raid.stunT > 0 || !canFire(w, e)) return
+    e.s.t = (e.s.t ?? rand(1, 3)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) { e.s.t = 2.6; aimed(w, e.x, e.y, 180, 3, 0.25, BulletKind.Shard, 9) }
   },
   onDeath(e, w) {
@@ -163,8 +163,8 @@ bossDef({
     const root = e.parent!
     const want = Math.atan2(w.player.y - e.y, w.player.x - e.x)
     e.s.aim = want
-    if (root.s.intro || root.s.dying || !canFire(w, e)) return
-    e.s.t = (e.s.t ?? rand(0.8, 2.4)) - w.frameDt * w.diff.fireRate
+    if (root.s.intro || root.s.dying || w.raid.stunT > 0 || !canFire(w, e)) return
+    e.s.t = (e.s.t ?? rand(0.8, 2.4)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) {
       e.s.t = root.s.phase === 3 ? 1.6 : 2.1
       e.s.burst = 4; e.s.bt = 0
@@ -214,9 +214,9 @@ bossDef({
 
 function bowUpdate(e: Enemy, w: World) {
   const root = e.parent!
-  if (root.s.intro || root.s.dying || e.armor <= 0) return
+  if (root.s.intro || root.s.dying || e.armor <= 0 || w.raid.stunT > 0) return
   const dt = w.frameDt
-  e.s.cyc = (e.s.cyc ?? 1.5) - dt * w.diff.fireRate
+  e.s.cyc = (e.s.cyc ?? 1.5) - dt * w.diff.fireRate * w.raid.rate
   if (e.s.state === 1) {
     // charging the beam
     e.s.charge = Math.min(1, (e.s.charge ?? 0) + dt / 1.3)
@@ -225,7 +225,7 @@ function bowUpdate(e: Enemy, w: World) {
   }
   e.s.charge = Math.max(0, (e.s.charge ?? 0) - dt * 2)
   if (e.s.cyc > 0) {
-    e.s.fanT = (e.s.fanT ?? 1) - dt * w.diff.fireRate
+    e.s.fanT = (e.s.fanT ?? 1) - dt * w.diff.fireRate * w.raid.rate
     if (e.s.fanT <= 0 && canFire(w, e)) {
       e.s.fanT = 1.3
       fan(w, e.x, e.y + 44 * S, Math.PI / 2 + Math.sin(w.time) * 0.3, 13, 2.1, 150, BulletKind.Big, 14)
@@ -330,10 +330,50 @@ function revenantUpdate(e: Enemy, w: World, dt: number) {
     w.addShake(6)
   }
 
+  const raid = w.raid
+  if (raid.stunT > 0) {
+    if (Math.random() < 0.6) w.parts.spawn(P.Spark, e.x + rand(-80, 80) * S, e.y + rand(-150, 150) * S, rand(-120, 120), rand(-160, 40), 0.4, 2, 0.5, C.cyan, 3)
+    return
+  }
+  const rate = w.diff.fireRate * raid.rate
+  const tick = (k: string, first: number) => (s[k] = (s[k] ?? first) - dt * rate)
+  if (s.phase === 1) {
+    const plates = alive(parts, 'plate')
+    if (plates.length && tick('mendT', 6) <= 0 && raid.ready()) {
+      s.mendT = 14
+      const pick = plates[Math.floor(Math.random() * plates.length)]
+      raid.begin(w, 'Stitch Repair', 3.2, (ww) => stitchRepair(ww), { kick: { target: pick }, warn: 'Interrupt — burst the glowing plate!' })
+    }
+  }
+  if (s.phase <= 2 && tick('barrageT', 9) <= 0 && raid.ready()) {
+    s.barrageT = 11
+    raid.begin(w, 'Debris Barrage', 1.0, (ww) => {
+      for (let i = 0; i < 6; i++) ww.raid.zone({ x: rand(60, PW - 60), y: rand(PH * 0.45, PH - 40), r: 56, kind: 'blast', delay: 1.5 + i * 0.12, dmg: 22, boom: (w2, z) => dropDebris(w2, z.x, z.y - 20, 'm6_debris_s', 40) })
+    }, { warn: 'Debris Barrage' })
+  }
+  if (s.phase === 2 && tick('wreckT', 6) <= 0 && raid.ready()) {
+    s.wreckT = 16
+    const x = clamp(w.player.x + rand(-230, 230), 100, PW - 100), y = rand(PH * 0.6, PH * 0.82)
+    raid.begin(w, 'Wreck Fall', 0.8, (ww) => ww.raid.zone({ x, y, r: 80, kind: 'soak', delay: 3.4, dmg: 44 }), { warn: 'Wreck Fall — soak it!' })
+  }
+  if (s.phase === 3) {
+    if (tick('orderT', 3) <= 0 && raid.ready()) {
+      s.orderT = 13
+      raid.begin(w, 'Last Order', 3.4, (ww) => lastOrder(ww, e), { kick: { target: e }, warn: 'Interrupt — burst the bridge!' })
+    }
+    if (tick('fuelT', 6) <= 0 && raid.ready()) {
+      s.fuelT = 10
+      raid.begin(w, 'Fuel Leak', 1.0, (ww) => {
+        const p = ww.player
+        for (let i = 0; i < 3; i++) ww.after(i * 0.4, () => ww.raid.zone({ x: clamp(p.x + rand(-40, 40), 40, PW - 40), y: clamp(p.y + rand(-30, 30), PH * 0.4, PH - 30), r: 52, kind: 'pool', delay: 1.0, linger: 5, dmg: 32, tint: '255,140,40' }))
+      }, { warn: 'Fuel Leak — get out of the fire' })
+    }
+  }
+
   // desperation: the bridge sings with everything left, but the spiral is slow and the ring has a door
   if (s.phase === 3) {
     spiral(w, e, dt, 9, 4, 0.9, 130)
-    s.ringT = (s.ringT ?? 2) - dt * w.diff.fireRate
+    s.ringT = (s.ringT ?? 2) - dt * rate
     if (s.ringT <= 0 && canFire(w, e)) {
       s.ringT = 2.7
       const toP = Math.atan2(w.player.y - e.y, w.player.x - e.x)
@@ -344,9 +384,34 @@ function revenantUpdate(e: Enemy, w: World, dt: number) {
         w.fire(e.x, e.y, a, 150, BulletKind.Big, 14)
       }
     }
-    s.aimT = (s.aimT ?? 1.2) - dt * w.diff.fireRate
+    s.aimT = (s.aimT ?? 1.2) - dt * rate
     if (s.aimT <= 0 && canFire(w, e)) { s.aimT = 1.7; aimed(w, e.x, e.y + 30, 240, 5, 0.09, BulletKind.Needle, 12) }
   }
+}
+
+/** Failed Stitch Repair: every living part knits 25% back together. */
+function stitchRepair(w: World) {
+  for (const p of w.bossParts) {
+    if (p.dead || p === w.boss) continue
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25)
+    w.parts.spawn(P.Ring, p.x, p.y, 0, 0, 0.4, 8, 50, C.magenta)
+  }
+  w.flashScreen = Math.max(w.flashScreen, 0.2)
+}
+
+/** Failed Last Order: every gun left fires at once — three rings with a door, and a hit across the field. */
+function lastOrder(w: World, e: Enemy) {
+  w.flashScreen = Math.max(w.flashScreen, 0.45)
+  w.addShake(16)
+  w.player.hurt(14, w.player.x, w.player.y)
+  for (let k = 0; k < 3; k++) w.after(k * 0.4, () => {
+    const gap = Math.atan2(w.player.y - e.y, w.player.x - e.x) + rand(-0.4, 0.4)
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * TAU
+      if (Math.abs(Math.atan2(Math.sin(a - gap), Math.cos(a - gap))) < 0.32) continue
+      w.fire(e.x, e.y, a, 150 + k * 25, BulletKind.Big, 14)
+    }
+  })
 }
 
 /** Sections go up stern → midships → sponsons → bow → bridge, then the standard boss finale. */
@@ -423,6 +488,6 @@ export function spawnRevenant(w: World) {
   for (const [bx, by] of [[-122, -40], [122, -40], [-120, 64], [120, 64]]) add('m6_rev_turret', bx, by, 'turret')
   const bow = add('m6_rev_bow', 0, 236, 'bow')
   bow.armor = 0
-  startBoss(w, e, 'Revenant — stitched dreadnought', parts)
+  startBoss(w, e, 'Revenant — stitched dreadnought', parts, false, 240)
   return e
 }

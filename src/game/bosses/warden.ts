@@ -113,9 +113,9 @@ bossDef({
     e.x = root.x + Math.cos(a) * R_NODE
     e.y = root.y + Math.sin(a) * R_NODE
     e.s.face = a
-    if (root.s.intro) return
+    if (root.s.intro || w.raid.stunT > 0) return
     // one node at a time, only when facing into the playfield
-    e.s.t = (e.s.t ?? 1.2 + e.s.slot * 1.6) - dt * w.diff.fireRate
+    e.s.t = (e.s.t ?? 1.2 + e.s.slot * 1.6) - dt * w.diff.fireRate * w.raid.rate
     const facingDown = Math.sin(a) > 0.25
     if (e.s.t <= 0 && facingDown) {
       e.s.t = 6.4
@@ -135,8 +135,8 @@ function segUpdate(e: Enemy, w: World, dt: number) {
     e.x = root.x + Math.cos(a) * R_SEG
     e.y = root.y + Math.sin(a) * R_SEG
     s.face = a
-    if (root.s.intro) return
-    s.f = (s.f ?? 1 + s.slot * 0.4) - dt * w.diff.fireRate
+    if (root.s.intro || w.raid.stunT > 0) return
+    s.f = (s.f ?? 1 + s.slot * 0.4) - dt * w.diff.fireRate * w.raid.rate
     if (s.f <= 0) {
       s.f = 2.5
       if (Math.sin(a) > 0.2 && e.y < w.player.y - 60) w.fire(e.x, e.y, a, 170, BulletKind.Orb, 10)
@@ -152,7 +152,8 @@ function segUpdate(e: Enemy, w: World, dt: number) {
   s.py += (ty - s.py) * Math.min(1, dt * 2.5)
   e.x = s.px; e.y = s.py
   s.face = Math.atan2(w.player.y - e.y, w.player.x - e.x)
-  s.f = (s.f ?? 1 + s.slot * 0.5) - dt * w.diff.fireRate
+  if (w.raid.stunT > 0) return
+  s.f = (s.f ?? 1 + s.slot * 0.5) - dt * w.diff.fireRate * w.raid.rate
   if (s.f <= 0) {
     s.f = 2.8
     if (e.y < w.player.y - 70) aimed(w, e.x, e.y, 200, 3, 0.12, BulletKind.Needle, 10)
@@ -214,13 +215,43 @@ function wardenUpdate(e: Enemy, w: World, dt: number) {
   }
   e.y += (Y0 + (s.phase >= 2 ? Math.sin(s.time * 0.7) * 17 : 0) - e.y) * Math.min(1, dt)
 
+  const raid = w.raid
+  if (raid.stunT > 0) {
+    if (Math.random() < 0.5) w.parts.spawn(P.Spark, e.x + rand(-40, 40) * S, e.y + rand(-40, 40) * S, rand(-120, 120), rand(-160, 40), 0.4, 2, 0.5, C.cyan, 3)
+    return
+  }
+  const rate = w.diff.fireRate * raid.rate
+  const tick = (k: string, first: number) => (s[k] = (s[k] ?? first) - dt * rate)
   if (s.phase === 1) {
-    s.aimT = (s.aimT ?? 2) - dt * w.diff.fireRate
+    // the core is only reachable through the ring's gaps: the kick is a precision check
+    if (tick('purgeT', 5) <= 0 && raid.ready()) {
+      s.purgeT = 14
+      raid.begin(w, 'Purge Protocol', 3.8, (ww) => purge(ww, e), { kick: { target: e, seconds: 0.55 }, warn: 'Interrupt — hit the core through the gaps!' })
+    }
+    if (tick('sweepT', 9) <= 0 && raid.ready()) {
+      s.sweepT = 11
+      raid.begin(w, 'Security Sweep', 0.9, (ww) => securitySweep(ww), { warn: 'Security Sweep' })
+    }
+  } else if (!(s.beamT > 0)) {
+    const drones = alive(w.bossParts, 'seg').filter((d) => d.s.drone)
+    if (drones.length && tick('overT', 4) <= 0 && raid.ready()) {
+      s.overT = 13
+      const d = drones[Math.floor(Math.random() * drones.length)]
+      raid.begin(w, 'Drone Overcharge', 3, (ww) => droneBlast(ww, d), { kick: { target: d }, warn: 'Interrupt — burst the marked drone!' })
+    }
+    if (tick('breachT', 9) <= 0 && raid.ready()) {
+      s.breachT = 17
+      const x = clamp(w.player.x + rand(-230, 230), 100, PW - 100), y = rand(PH * 0.55, PH * 0.8)
+      raid.begin(w, 'Containment Breach', 0.8, (ww) => ww.raid.zone({ x, y, r: 78, kind: 'soak', delay: 3.4, dmg: 42 }), { warn: 'Containment Breach — soak it!' })
+    }
+  }
+  if (s.phase === 1) {
+    s.aimT = (s.aimT ?? 2) - dt * rate
     if (s.aimT <= 0) { s.aimT = 2.6; aimed(w, e.x, e.y + 20 * S, 210, 3, 0.18, BulletKind.Orb, 12) }
   } else {
     s.cyc = (s.cyc ?? 0) + dt
     if (s.cyc % 6 < 2.4 && !(s.beamT > 0)) spiral(w, e, dt, s.phase === 3 ? 10 : 12, s.phase === 3 ? 2 : 3, 1.7, 150)
-    s.ringT = (s.ringT ?? 3) - dt * w.diff.fireRate
+    s.ringT = (s.ringT ?? 3) - dt * rate
     if (s.ringT <= 0) { s.ringT = s.phase === 3 ? 5.5 : 4; ring(w, e.x, e.y, 18, 120, rand(0, TAU), BulletKind.Big, 14) }
   }
 
@@ -242,8 +273,9 @@ function wardenUpdate(e: Enemy, w: World, dt: number) {
         s.beamCd = 5.5
       }
     } else {
-      s.beamCd -= dt * w.diff.fireRate
-      if (s.beamCd <= 0) {
+      s.beamCd -= dt * rate
+      if (s.beamCd <= 0 && raid.ready()) {
+        raid.begin(w, 'Annihilation Beam', BEAM_CHARGE, () => {}, { warn: 'Annihilation Beam — leave the column!' })
         s.beamT = BEAM_CHARGE
         s.beamX = clamp(w.player.x, BEAM_W / 2, PW - BEAM_W / 2)
         w.emit({ type: 'radio', who: 'KESTREL', text: s.beamSaid ? 'Again!' : 'It is charging something big. Move!' })
@@ -251,6 +283,28 @@ function wardenUpdate(e: Enemy, w: World, dt: number) {
       }
     }
   }
+}
+
+/** Failed Purge Protocol: every node fires at once and the core rings. */
+function purge(w: World, e: Enemy) {
+  for (const n of alive(w.bossParts, 'node')) w.laser(n.x, n.y, n.s.face ?? 0, 1000, 16, 0.6, 1.4, n, e.s.spin ?? 0)
+  ring(w, e.x, e.y, 24, 140, rand(0, TAU), BulletKind.Big, 14)
+  w.flashScreen = Math.max(w.flashScreen, 0.3)
+  w.addShake(10)
+}
+
+/** A cross of blasts centred on the player, the centre cell last so standing still is the wrong answer. */
+function securitySweep(w: World) {
+  const p = w.player
+  const pts: [number, number, number][] = [[0, 0, 1.8], [-90, 0, 1.3], [90, 0, 1.3], [0, -85, 1.45], [0, 85, 1.45], [-180, 0, 1.6], [180, 0, 1.6]]
+  for (const [dx, dy, d] of pts) w.raid.zone({ x: clamp(p.x + dx, 40, PW - 40), y: clamp(p.y + dy, PH * 0.35, PH - 30), r: 50, kind: 'blast', delay: d, dmg: 20 })
+}
+
+/** Failed Drone Overcharge: the drone detonates where it is. */
+function droneBlast(w: World, d: Enemy) {
+  if (d.dead) return
+  w.raid.zone({ x: d.x, y: d.y, r: 110, kind: 'blast', delay: 0.6, dmg: 30, boom: (ww, z) => ring(ww, z.x, z.y, 20, 150, rand(0, TAU), BulletKind.Orb, 10) })
+  w.kill(d)
 }
 
 export function spawnWarden(w: World) {
@@ -268,6 +322,6 @@ export function spawnWarden(w: World) {
     p.s.slot = i
     parts.push(p)
   }
-  startBoss(w, e, 'Warden — dock defence core', parts)
+  startBoss(w, e, 'Warden — dock defence core', parts, false, 240)
   return e
 }

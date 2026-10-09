@@ -28,6 +28,6 @@ export async function loadPaintedArt() {
       done()
     }
     img.onerror = () => done()
-    img.src = `${BASE}${key}.png`
+    img.src = `${BASE}${key}.webp`
   })))
 }

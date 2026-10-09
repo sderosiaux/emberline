@@ -65,11 +65,11 @@ bossDef({
   id: 'm7_voice', hp: 2600, r: 32, scale: S, sprite: 'm7_voice', explode: 'large', score: 6000,
   update(e, w) {
     const root = e.parent!
-    if (root.s.intro || root.s.phase !== 1) return
+    if (root.s.intro || root.s.phase !== 1 || w.raid.stunT > 0) return
     e.rot = Math.sin(w.time * 1.3 + e.ox) * 0.12
     if (!canFire(w, e)) return
     const side = e.ox < 0 ? -1 : 1
-    e.s.t = (e.s.t ?? (side < 0 ? 1.5 : 3.2)) - w.frameDt * w.diff.fireRate
+    e.s.t = (e.s.t ?? (side < 0 ? 1.5 : 3.2)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) {
       e.s.t = 2.7
       e.s.n = (e.s.n ?? 0) + 1
@@ -96,7 +96,7 @@ bossDef({
     if (e.hidden || root.s.dying || !canFire(w, e)) return
     const a = e.rot + Math.PI / 2
     if (Math.sin(a) < 0.25) return
-    e.s.t = (e.s.t ?? rand(0.5, 2.2)) - w.frameDt * w.diff.fireRate
+    e.s.t = (e.s.t ?? rand(0.5, 2.2)) - w.frameDt * w.diff.fireRate * w.raid.rate
     if (e.s.t <= 0) { e.s.t = root.s.phase === 3 ? 1.9 : 2.4; w.fire(e.x, e.y, a, 130, BulletKind.Shard, 10) }
   },
   onDeath(e, w) { partDown(w, e, 'medium') },
@@ -113,7 +113,7 @@ registerEnemy({
 function pipeUpdate(e: Enemy, w: World, dt: number) {
   const root = e.parent!
   e.s.tell = Math.max(0, (e.s.tell ?? 0) - dt * 0.5)
-  if (root.s.intro || root.s.phase !== 1) return
+  if (root.s.intro || root.s.phase !== 1 || w.raid.stunT > 0) return
   if (e.s.play > 0) {
     // column: a vertical stream of notes, slightly wavering
     e.s.play -= dt
@@ -157,11 +157,28 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
   if (s.phase === 3) w.scroll += (170 - w.scroll) * Math.min(1, dt * 0.7)
 
   const pipes = alive(parts, 'pipe'), voices = alive(parts, 'voice'), petals = alive(parts, 'petal')
+  const raid = w.raid
+  if (raid.stunT > 0) {
+    if (Math.random() < 0.6) w.parts.spawn(P.Spark, e.x + rand(-60, 60) * S, e.y + rand(-40, 60) * S, rand(-120, 120), rand(-160, 40), 0.4, 2, 0.5, C.cyan, 3)
+    return
+  }
+  const rate = w.diff.fireRate * raid.rate
+  const tick = (k: string, first: number) => (s[k] = (s[k] ?? first) - dt * rate)
 
   if (s.phase === 1) {
+    if (voices.length && tick('requiemT', 6) <= 0 && raid.ready()) {
+      s.requiemT = 15
+      const v = voices[Math.floor(Math.random() * voices.length)]
+      raid.begin(w, 'Requiem', 3.6, (ww) => requiem(ww), { kick: { target: v }, warn: 'Interrupt — silence the marked voice!' })
+    }
+    if (tick('resT', 10) <= 0 && raid.ready()) {
+      s.resT = 18
+      const x = clamp(w.player.x + rand(-230, 230), 100, PW - 100), y = rand(PH * 0.6, PH * 0.82)
+      raid.begin(w, 'Resonance', 0.8, (ww) => ww.raid.zone({ x, y, r: 78, kind: 'soak', delay: 3.4, dmg: 46 }), { warn: 'Resonance — soak it!' })
+    }
     // chords: one or two pipes at a time, alternating streams and beams. The pipe right
     // above the player is skipped once in a while so there is always a window to hit it.
-    s.chord = (s.chord ?? 1.5) - dt * w.diff.fireRate
+    s.chord = (s.chord ?? 1.5) - dt * rate
     if (s.chord <= 0 && pipes.length) {
       s.n = (s.n ?? 0) + 1
       s.chord = pipes.length > 3 ? 2.1 : 1.7
@@ -172,7 +189,7 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
       pool.slice(0, count).forEach((p, i) => playPipe(w, p, (s.n + i) % 2 === 0))
     }
     // the heart hums through the iris: slow rings, quicker as the wall loses its voices
-    s.humT = (s.humT ?? 2.5) - dt * w.diff.fireRate
+    s.humT = (s.humT ?? 2.5) - dt * rate
     if (s.humT <= 0 && w.player.alive) {
       s.humT = 2.2 + (pipes.length + voices.length) * 0.25
       ring(w, e.x, e.y + 40 * S, 22, 105, s.time * 0.7, BulletKind.Wave, 11)
@@ -230,8 +247,28 @@ function choirUpdate(e: Enemy, w: World, dt: number) {
   }
   placePetals(e, parts, s.time, s.phase === 3 ? 1.5 : 0.8)
 
+  if (tick('hymnT', 5) <= 0 && raid.ready()) {
+    s.hymnT = s.phase === 3 ? 12 : 15
+    raid.begin(w, s.phase === 3 ? 'Final Verse' : 'Hymn of Unmaking', 3.6, (ww) => unmaking(ww, e), { kick: { target: e, seconds: 0.55 }, warn: 'Interrupt — shoot the heart between the petals!' })
+  }
+  if (s.phase === 2 && tick('beatT', 9) <= 0 && raid.ready()) {
+    s.beatT = 16
+    raid.begin(w, 'Heartbeat', 1.2, (ww) => {
+      ww.raid.pull(e.x, e.y, 110, 4)
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * TAU + rand(0, 0.3)
+        ww.raid.zone({ x: e.x + Math.cos(a) * 150, y: e.y + Math.sin(a) * 150, r: 46, kind: 'pool', delay: 0.5, linger: 4, dmg: 36 })
+      }
+    }, { warn: 'Heartbeat — pull against it!' })
+  }
+  if (s.phase === 3 && tick('fallT', 4) <= 0 && raid.ready()) {
+    s.fallT = 7
+    raid.begin(w, 'Collapse', 0.8, (ww) => {
+      for (let i = 0; i < 6; i++) ww.raid.zone({ x: rand(50, PW - 50), y: rand(PH * 0.45, PH - 40), r: 56, kind: 'blast', delay: 1.4 + i * 0.1, dmg: 22 })
+    }, { warn: 'Collapse' })
+  }
   if (!canFire(w, e)) return
-  const fr = w.diff.fireRate
+  const fr = rate
   if (s.phase === 2) {
     spiral(w, e, dt, 9, 3, 1.3, 145, BulletKind.Wave)
     s.streamT = (s.streamT ?? 3) - dt * fr
@@ -310,6 +347,24 @@ function rose(w: World, e: Enemy) {
 /** Two beams sweeping inward from wide angles (the sweep also runs during the telegraph); they stop ~0.4 rad either side of straight down. */
 function scissors(w: World, e: Enemy) {
   for (const side of [-1, 1]) w.laser(e.x, e.y + 20 * S, Math.PI / 2 + side * 1.05, 1100, 23, 1.1, 1.7, e, -side * 0.22)
+}
+
+/** Failed Requiem: every pipe left plays a beam at once, except the one nearest beside the player. */
+function requiem(w: World) {
+  const pipes = alive(w.bossParts, 'pipe')
+  const spare = [...pipes].sort((a, b) => Math.abs(a.x - w.player.x) - Math.abs(b.x - w.player.x))[1]
+  for (const p of pipes) if (p !== spare) w.laser(p.x, p.y + 64 * S, Math.PI / 2, 900, 25, 0.9, 1.4, p)
+  w.player.hurt(12, w.player.x, w.player.y)
+  w.flashScreen = Math.max(w.flashScreen, 0.35)
+  w.addShake(12)
+}
+
+/** Failed Hymn: three roses in quick succession, each with its door. */
+function unmaking(w: World, e: Enemy) {
+  w.player.hurt(14, w.player.x, w.player.y)
+  w.flashScreen = Math.max(w.flashScreen, 0.45)
+  w.addShake(16)
+  for (let k = 0; k < 3; k++) w.after(k * 0.45, () => { if (!e.dead && !e.s.dying) rose(w, e) })
 }
 
 function startDying(e: Enemy, w: World) {
@@ -429,6 +484,6 @@ export function spawnChoir(w: World) {
   for (const [ox, oy] of PIPES) parts.push(w.spawn('m7_pipe', e.x + ox, e.y + oy, { parent: e, ox, oy, tag: 'pipe' }))
   for (const [ox, oy] of VOICES) parts.push(w.spawn('m7_voice', e.x + ox, e.y + oy, { parent: e, ox, oy, tag: 'voice' }))
   for (let i = 0; i < 6; i++) parts.push(w.spawn('m7_petal', e.x, e.y, { parent: e, ox: 0, oy: 0, tag: 'petal' }))
-  startBoss(w, e, 'The Choir', parts, true)
+  startBoss(w, e, 'The Choir', parts, true, 330)
   return e
 }

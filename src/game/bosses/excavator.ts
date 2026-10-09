@@ -383,7 +383,7 @@ function excUpdate(e: Enemy, w: World, dt: number) {
       raid.begin(w, 'Gravity Tractor', 1.2, (ww) => {
         const m = maw()
         ww.raid.pull(m.x, m.y + 30, 135, 4.5)
-        ww.raid.zone({ x: m.x, y: m.y + 20, r: 70, kind: 'pool', delay: 0.4, linger: 4.4, dmg: 45 })
+        ww.raid.zone({ x: m.x, y: m.y + 20, r: 70, kind: 'pool', delay: 0.4, linger: 4.4, dmg: 45, tint: '255,110,30' })
       }, { warn: 'Gravity Tractor — fly away!' })
     }
     if (tick('fanT', 2) <= 0) {

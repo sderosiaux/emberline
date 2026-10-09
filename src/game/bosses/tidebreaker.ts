@@ -69,9 +69,9 @@ bossDef({
 bossDef({
   id: 'm2_tide_tower', hp: 1700, r: 28, scale: S, sprite: 'm2_tide_tower', layer: 'ground', explode: 'large', score: 4000,
   update(e, w, dt) {
-    if (!partActive(e)) return
+    if (!partActive(e) || w.raid.stunT > 0) return
     const ph = e.parent!.s.phase ?? 1
-    e.s.f = (e.s.f ?? 1.2) - dt * w.diff.fireRate
+    e.s.f = (e.s.f ?? 1.2) - dt * w.diff.fireRate * w.raid.rate
     if (e.s.f <= 0) {
       e.s.f = 2.3
       e.s.n = (e.s.n ?? 0) + 1
@@ -98,7 +98,8 @@ bossDef({
       if (e.s.charge <= 0) torpedoes(e, w, ph)
       return
     }
-    e.s.f = (e.s.f ?? (e.ox < 0 ? 1.8 : 3.4)) - dt * w.diff.fireRate
+    if (w.raid.stunT > 0) return
+    e.s.f = (e.s.f ?? (e.ox < 0 ? 1.8 : 3.4)) - dt * w.diff.fireRate * w.raid.rate
     if (e.s.f <= 0) {
       e.s.f = ph >= 2 ? 3 : 3.8
       e.s.charge = 0.75
@@ -127,9 +128,9 @@ bossDef({
   id: 'm2_tide_vls', hp: 1100, r: 30, scale: S, sprite: 'm2_tide_vls', layer: 'ground', explode: 'medium', score: 3000,
   update(e, w, dt) {
     e.s.open = Math.max(0, (e.s.open ?? 0) - dt)
-    if (!partActive(e)) return
+    if (!partActive(e) || w.raid.stunT > 0) return
     const ph = e.parent!.s.phase ?? 1
-    e.s.f = (e.s.f ?? 2.6) - dt * w.diff.fireRate
+    e.s.f = (e.s.f ?? 2.6) - dt * w.diff.fireRate * w.raid.rate
     if (e.s.f <= 0) {
       e.s.f = ph >= 2 ? 4.2 : 5.2
       e.s.open = 1.2
@@ -215,7 +216,7 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
   switch (s.mode) {
     case Mode.Up:
       s.t -= dt
-      if (s.phase === 1 && s.t <= 0) {
+      if (s.phase === 1 && s.t <= 0 && !w.raid.cast) {
         s.mode = Mode.Diving; s.t = 1.6
         if (!s.dove) { s.dove = 1; w.emit({ type: 'radio', who: 'KESTREL', text: "It's diving. Can't touch it down there." }) }
         sfxAt('enemy_laser_charge', e.x, 0.5, 0.5)
@@ -251,6 +252,37 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
   for (const p of parts) if (p !== e && !p.dead) { p.x = e.x + p.ox; p.y = e.y + p.oy }
 
   if (s.mode !== Mode.Up) return
+  const raid = w.raid
+  if (raid.stunT > 0) {
+    if (Math.random() < 0.5) w.parts.spawn(P.Spark, e.x + rand(-40, 40), e.y + HULL + rand(-120, 120), rand(-120, 120), rand(-160, 40), 0.4, 2, 0.5, C.cyan, 3)
+    return
+  }
+  const rate = w.diff.fireRate * raid.rate
+  const tick = (k: string, first: number) => (s[k] = (s[k] ?? first) - dt * rate)
+  const tower = alive(parts, 'tower')[0]
+  // Sonar Lock: the tower paints you; burst it before the lock completes or a homing salvo follows
+  if (s.phase === 1 && tower && tick('sonarT', 4) <= 0 && raid.ready()) {
+    s.sonarT = 11
+    raid.begin(w, 'Sonar Lock', 3.2, (ww) => sonarSalvo(ww, e), { kick: { target: tower }, warn: 'Interrupt — burst the conning tower!' })
+  }
+  if (s.phase >= 2) {
+    if (tick('kickT', 4) <= 0 && raid.ready()) {
+      s.kickT = 15
+      raid.begin(w, 'Core Overpressure', 3.4, (ww) => overpressure(ww, e), { kick: { target: e }, warn: 'Interrupt — burst the core!' })
+    }
+    if (tick('surgeT', 8) <= 0 && raid.ready()) {
+      s.surgeT = 17
+      const x = clamp(w.player.x + rand(-240, 240), 100, PW - 100), y = rand(PH * 0.55, PH * 0.8)
+      raid.begin(w, 'Tidal Surge', 0.8, (ww) => ww.raid.zone({ x, y, r: 76, kind: 'soak', delay: 3.4, dmg: 40 }), { warn: 'Tidal Surge — soak it!' })
+    }
+    if (tick('maelT', 12) <= 0 && raid.ready()) {
+      s.maelT = s.phase >= 3 ? 13 : 18
+      raid.begin(w, 'Maelstrom', 1.2, (ww) => {
+        ww.raid.pull(e.x, e.y, 120, 4)
+        ww.raid.zone({ x: e.x, y: e.y + 30, r: 66, kind: 'pool', delay: 0.4, linger: 4, dmg: 40, tint: '60,220,210' })
+      }, { warn: 'Maelstrom — swim against it!' })
+    }
+  }
 
   // slow sway while surfaced; broken hull lurches toward the player later
   if (s.phase >= 3) e.x += clamp(clamp(w.player.x, 160, PW - 160) - e.x, -40 * dt, 40 * dt)
@@ -259,13 +291,13 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
   if (Math.random() < 0.3) w.parts.spawn(P.Smoke, e.x + rand(-12, 12), e.y + rand(-140, 115), 0, -20, 1, 5, 18, C.smokeLight, 0.5)
 
   // phase 2+: pressure pulses from the core + geysers around the player
-  s.pulse -= dt * w.diff.fireRate
+  s.pulse -= dt * rate
   if (s.pulse <= 0) {
     s.pulse = s.phase >= 3 ? 4.2 : 3.1
     s.pulseN = (s.pulseN ?? 0) + 1
     ring(w, e.x, e.y, s.phase >= 3 ? 14 : 18, 115, s.pulseN * 0.2, BulletKind.Big, 14)
   }
-  s.geyser -= dt * w.diff.fireRate
+  s.geyser -= dt * rate
   if (s.geyser <= 0) {
     s.geyser = s.phase >= 3 ? 6.5 : 4.8
     const px = w.player.x, py = w.player.y
@@ -273,6 +305,30 @@ function tideUpdate(e: Enemy, w: World, dt: number) {
     for (const [x, y] of spots) geyser(w, clamp(x, 30, PW - 30), clamp(y, 200, PH - 24))
   }
   if (s.phase >= 3) whirlpool(e, w, dt)
+}
+
+/** Failed Sonar Lock: a salvo of homing torpedoes from the bow. */
+function sonarSalvo(w: World, e: Enemy) {
+  for (let i = 0; i < 4; i++) w.after(i * 0.22, () => {
+    if (e.dead) return
+    missile(w, e.x + (i % 2 ? 30 : -30) * S, e.y + 120 * S, Math.PI / 2 + (i % 2 ? 0.5 : -0.5), 150, 2.4, 12)
+  })
+  w.addShake(6)
+}
+
+/** Failed Core Overpressure: the split hull vents in three expanding rings with a gap. */
+function overpressure(w: World, e: Enemy) {
+  w.flashScreen = Math.max(w.flashScreen, 0.4)
+  w.addShake(14)
+  w.player.hurt(12, w.player.x, w.player.y)
+  for (let k = 0; k < 3; k++) w.after(k * 0.4, () => {
+    const gap = Math.atan2(w.player.y - e.y, w.player.x - e.x) + rand(-0.4, 0.4)
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * TAU
+      if (Math.abs(Math.atan2(Math.sin(a - gap), Math.cos(a - gap))) < 0.33) continue
+      w.fire(e.x, e.y, a, 150 + k * 25, BulletKind.Big, 14)
+    }
+  })
 }
 
 function whirlpool(e: Enemy, w: World, dt: number) {
@@ -388,6 +444,6 @@ export function spawnTidebreaker(w: World) {
   parts.push(w.spawn('m2_tide_tower', e.x, e.y - 60 * S, { parent: e, ox: 0, oy: -60 * S, tag: 'tower' }))
   for (const ox of [-34 * S, 34 * S]) parts.push(w.spawn('m2_tide_tube', e.x + ox, e.y + 80 * S, { parent: e, ox, oy: 80 * S, tag: 'tube' }))
   for (const p of parts) p.hidden = true
-  startBoss(w, e, 'Tidebreaker — leviathan submarine', parts)
+  startBoss(w, e, 'Tidebreaker — leviathan submarine', parts, false, 200)
   return e
 }

@@ -43,6 +43,8 @@ export interface Zone {
   /** Pools linger and burn for this long after resolving. */
   linger: number
   live: boolean
+  /** 'r,g,b' tint; defaults by kind (blast orange, pool magenta, soak gold). */
+  tint?: string
   boom?: (w: World, z: Zone, inside: boolean) => void
 }
 
@@ -53,6 +55,8 @@ export interface CastOpts {
   kick?: { target: Enemy; seconds?: number }
   kicked?: (w: World) => void
   warn?: string
+  /** Warning colour; defaults to kick (cyan) for interruptible casts and danger (red) otherwise. */
+  tone?: WarnTone
 }
 
 const DPS_WINDOW = 6
@@ -91,7 +95,7 @@ export class Raid {
       kick = { target: o.kick.target, need: Math.round(need), dealt: 0 }
     }
     this.cast = { name, time, t: 0, kick, done, kicked: o.kicked }
-    if (o.warn) warn(w, o.warn, kick ? 'kick' : 'danger')
+    if (o.warn) warn(w, o.warn, o.tone ?? (kick ? 'kick' : 'danger'))
     if (!w.preview) audio.sfx(kick ? 'cast_kick' : 'cast_start')
   }
 
@@ -215,7 +219,7 @@ export function drawZones(c: CanvasRenderingContext2D, w: World) {
   const r = w.raid
   for (const z of r.zones) {
     const k = clamp(z.t / z.delay, 0, 1)
-    const col = z.kind === 'soak' ? '255,206,60' : z.kind === 'pool' ? '255,60,140' : '255,90,40'
+    const col = z.tint ?? (z.kind === 'soak' ? '255,206,60' : z.kind === 'pool' ? '255,60,140' : '255,90,40')
     c.save()
     if (z.live) {
       // burning pool

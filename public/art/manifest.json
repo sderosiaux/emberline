@@ -18,5 +18,157 @@
  "m4_exc_maw": {
   "w": 124,
   "h": 74
+ },
+ "smelter_body": {
+  "w": 240,
+  "h": 186
+ },
+ "smelter_core": {
+  "w": 80,
+  "h": 80
+ },
+ "smelter_arm": {
+  "w": 64,
+  "h": 126
+ },
+ "smelter_pod": {
+  "w": 48,
+  "h": 48
+ },
+ "m2_tide_hull": {
+  "w": 170,
+  "h": 380
+ },
+ "m2_tide_core": {
+  "w": 50,
+  "h": 64
+ },
+ "m2_tide_tower": {
+  "w": 60,
+  "h": 90
+ },
+ "m2_tide_tube": {
+  "w": 44,
+  "h": 56
+ },
+ "m2_tide_vls": {
+  "w": 64,
+  "h": 60
+ },
+ "m2_tide_vls_open": {
+  "w": 64,
+  "h": 60
+ },
+ "m3_bastion_body": {
+  "w": 280,
+  "h": 220
+ },
+ "m3_bastion_cannon": {
+  "w": 44,
+  "h": 86
+ },
+ "m3_bastion_door": {
+  "w": 26,
+  "h": 50
+ },
+ "m3_bastion_pylon": {
+  "w": 40,
+  "h": 40
+ },
+ "m3_bastion_pylon_dead": {
+  "w": 40,
+  "h": 40
+ },
+ "m3_bastion_gun": {
+  "w": 40,
+  "h": 40
+ },
+ "m3_bastion_gun_barrel": {
+  "w": 30,
+  "h": 53
+ },
+ "m3_bastion_rubble": {
+  "w": 280,
+  "h": 220
+ },
+ "m5_warden_core": {
+  "w": 110,
+  "h": 110
+ },
+ "m5_warden_seg": {
+  "w": 40,
+  "h": 26
+ },
+ "m5_warden_node": {
+  "w": 30,
+  "h": 30
+ },
+ "m6_rev_hull": {
+  "w": 300,
+  "h": 540
+ },
+ "m6_rev_spars": {
+  "w": 780,
+  "h": 260
+ },
+ "m6_rev_bow": {
+  "w": 96,
+  "h": 120
+ },
+ "m6_rev_engine": {
+  "w": 60,
+  "h": 76
+ },
+ "m6_rev_missile": {
+  "w": 52,
+  "h": 60
+ },
+ "m6_rev_plate": {
+  "w": 58,
+  "h": 96
+ },
+ "m6_turret": {
+  "w": 36,
+  "h": 36
+ },
+ "m7_heart": {
+  "w": 150,
+  "h": 150
+ },
+ "m7_pipe": {
+  "w": 40,
+  "h": 126
+ },
+ "m7_voice": {
+  "w": 60,
+  "h": 60
+ },
+ "m7_petal": {
+  "w": 44,
+  "h": 74
+ },
+ "m7_wall_l": {
+  "w": 300,
+  "h": 176
+ },
+ "garden_core": {
+  "w": 150,
+  "h": 150
+ },
+ "garden_petal": {
+  "w": 50,
+  "h": 96
+ },
+ "m2_tide_hull_l": {
+  "w": 170,
+  "h": 380
+ },
+ "m2_tide_hull_r": {
+  "w": 170,
+  "h": 380
+ },
+ "m7_wall_r": {
+  "w": 300,
+  "h": 176
  }
 }

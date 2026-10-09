@@ -52,6 +52,10 @@ In Dasha's hangar you fit eight slots: front gun, rear gun, two pods, reactor, s
 
 Some gear never shows up in the shop until you find its data core. The secrets are in the missions. The game doesn't point at them.
 
+Bosses fight like dungeon bosses. Every big attack has a name, a cast bar and a warning, and asks for a decision: get out of the burning ground, get into the gold circle (a soak: miss it and the whole field takes the hit), fly against a pull, or burst the marked weak point before the bar fills (an interrupt, sized to the damage you've been dealing, so any build can manage it by focusing fire). A successful interrupt stuns the boss and leaves it vulnerable. Each boss also has an enrage timer.
+
+The boss art was painted with Google's gemini-3-pro-image model, one image per destructible part, keyed out of a flat background. `tools/generate-art.py` holds every prompt; rerun it with an asset name for a new take. If an image is missing, the game falls back to the procedural sprite.
+
 Every mission has one moment where the camera pulls back, Supreme Commander style, to show a swarm massing above the field. For the next seven seconds the whole wide view is playable: fly into the open ground, flank the formation, get above it. Then the camera dives back in and herds the ship home (it's invulnerable while that happens). Bosses get a shorter cinematic pull-back on arrival, so you see the whole thing before it fills the screen. Above the field you see the real ground still to come. To each side, the biome paints another strip of its own tiles, in a different order, and the edges blend into the field. It's new terrain, not a copy of the screen.
 
 Difficulty modes change behaviour as well as numbers: Warhawk enemies lead their shots and elites show up more often, and on Emberline (unlocked by finishing a campaign) destroyed Choir craft fire back as they die.

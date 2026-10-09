@@ -3,7 +3,7 @@ import type { Enemy } from '../entities'
 import { BulletKind, PickupKind } from '../entities'
 import { bossDef, startBoss, partDown, alive } from './common'
 import { enemySfx } from '../patterns'
-import { PW } from '../consts'
+import { PW, PH } from '../consts'
 import { rand, TAU } from '../../core/math'
 import { P, C } from '../../render/particles'
 import { drawSprite, getSprite } from '../../render/sprites'
@@ -104,6 +104,25 @@ function gardenerUpdate(e: Enemy, w: World, dt: number) {
   const ty = 162 + Math.sin(s.time * 0.6) * (s.phase === 2 ? 25 : 12)
   e.x += (tx - e.x) * Math.min(1, dt * 0.8)
   e.y += (ty - e.y) * Math.min(1, dt * 0.8)
+
+  // it never aims, and its mechanics don't either: fixed, symmetric places to read and use
+  const raid = w.raid
+  const tick = (k: string, first: number) => (s[k] = (s[k] ?? first) - dt * w.diff.fireRate * raid.rate)
+  if (s.phase >= 2 && tick('offerT', 6) <= 0 && raid.ready()) {
+    s.offerT = 16
+    const side = (s.offerN = ((s.offerN ?? 0) + 1) % 3) - 1
+    raid.begin(w, 'Offering', 0.8, (ww) => ww.raid.zone({ x: PW / 2 + side * PW * 0.3, y: PH * 0.72, r: 80, kind: 'soak', delay: 3.6, dmg: 38 }), { warn: 'stand in the light', tone: 'kick' })
+  }
+  if (s.phase === 3 && tick('fallT', 9) <= 0 && raid.ready()) {
+    s.fallT = 14
+    raid.begin(w, 'Petalfall', 1.0, (ww) => {
+      const rot = (s.fallN = (s.fallN ?? 0) + 1) * (Math.PI / 6)
+      for (let i = 0; i < 6; i++) {
+        const a = rot + (i / 6) * TAU
+        ww.raid.zone({ x: PW / 2 + Math.cos(a) * 230, y: PH * 0.62 + Math.sin(a) * 150, r: 58, kind: 'pool', delay: 1.4, linger: 6, dmg: 30, tint: '190,150,255' })
+      }
+    }, { warn: 'petals fall', tone: 'kick' })
+  }
 
   if (s.phase === 1) {
     s.bloomT = (s.bloomT ?? 2.5) - dt * w.diff.fireRate
@@ -211,7 +230,7 @@ export function spawnGardener(w: World) {
     parts.push(p)
   }
   e.onDeath = null
-  startBoss(w, e, 'The Gardener', parts)
+  startBoss(w, e, 'The Gardener', parts, false, 300)
   // startBoss owns root.onDeath; chain the gift after it
   const bossDeath = e.onDeath as ((ww: World, en: Enemy) => void) | null
   e.onDeath = (ww, en) => {
