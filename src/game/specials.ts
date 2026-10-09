@@ -27,7 +27,7 @@ export function triggerSpecial(p: Player, w: World, id: string) {
       f.nova = { x: p.x, y: p.y, r: 10, hit: new Set() }
       w.flashScreen = 0.35
       w.addShake(10)
-      if (!w.preview) audio.sfx('special_nova')
+      if (!w.preview && !w.arcade) audio.sfx('special_nova') // arcade plays its own bomb sound
       break
     case 'overclock':
       p.overclock = 7

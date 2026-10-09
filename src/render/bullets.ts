@@ -107,3 +107,60 @@ export function initBulletTextures() {
 }
 
 export function bulletTex(k: BulletKind) { return tex.get(k)! }
+
+/**
+ * Enemy laser textures. All are drawn along +x in beam space and stretched:
+ * `across` is a 1×N profile (transparent → colour → transparent) used for glow and core,
+ * `flow` is a tileable strip of bright streaks scrolled along the beam to show energy moving,
+ * `star` is the four-point muzzle flare.
+ */
+export const laserFx = {
+  glow: null as HTMLCanvasElement | null,
+  core: null as HTMLCanvasElement | null,
+  flow: null as HTMLCanvasElement | null,
+  star: null as HTMLCanvasElement | null,
+}
+
+function profile(stops: [number, string][]) {
+  const c = makeCanvas(1, 64)
+  const x = c.getContext('2d')!
+  const g = x.createLinearGradient(0, 0, 0, 64)
+  for (const [o, col] of stops) g.addColorStop(o, col)
+  x.fillStyle = g
+  x.fillRect(0, 0, 1, 64)
+  return c
+}
+
+export function initLaserTextures() {
+  laserFx.glow = profile([[0, 'rgba(255,40,140,0)'], [0.3, 'rgba(255,40,140,0.35)'], [0.5, 'rgba(255,90,180,0.75)'], [0.7, 'rgba(255,40,140,0.35)'], [1, 'rgba(255,40,140,0)']])
+  laserFx.core = profile([[0, 'rgba(255,60,150,0)'], [0.2, 'rgba(255,60,150,0.95)'], [0.38, '#ffc2e2'], [0.5, '#ffffff'], [0.62, '#ffc2e2'], [0.8, 'rgba(255,60,150,0.95)'], [1, 'rgba(255,60,150,0)']])
+  // streak strip: 256 px loop of soft dashes at random heights and lengths
+  const f = makeCanvas(256, 32)
+  const fx = f.getContext('2d')!
+  let seed = 7
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+  for (let i = 0; i < 40; i++) {
+    const y = 6 + rnd() * 20, x0 = rnd() * 256, len = 16 + rnd() * 60, a = 0.25 + rnd() * 0.6
+    for (const dx of [0, -256]) {
+      const g = fx.createLinearGradient(x0 + dx, 0, x0 + dx + len, 0)
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, `rgba(255,230,245,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)')
+      fx.fillStyle = g
+      fx.fillRect(x0 + dx, y, len, 1 + rnd() * 2)
+    }
+  }
+  laserFx.flow = f
+  const st = makeCanvas(128, 128)
+  const sx = st.getContext('2d')!
+  sx.translate(64, 64)
+  for (const [w, l] of [[3, 62], [2, 40]] as const) {
+    for (let k = 0; k < 4; k++) {
+      sx.save(); sx.rotate((k * Math.PI) / 2 + (w === 2 ? Math.PI / 4 : 0))
+      const g = sx.createLinearGradient(0, 0, l, 0)
+      g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.3, 'rgba(255,120,200,0.6)'); g.addColorStop(1, 'rgba(255,60,150,0)')
+      sx.fillStyle = g
+      sx.beginPath(); sx.moveTo(0, -w); sx.lineTo(l, 0); sx.lineTo(0, w); sx.closePath(); sx.fill()
+      sx.restore()
+    }
+  }
+  laserFx.star = st
+}

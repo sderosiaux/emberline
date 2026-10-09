@@ -14,6 +14,7 @@ const FIRE_KEYS = new Set(['Space', 'KeyZ', 'KeyJ'])
 const SPECIAL_KEYS = new Set(['KeyX', 'KeyK'])
 const PRECISION_KEYS = new Set(['ShiftLeft', 'ShiftRight', 'KeyL'])
 const PAUSE_KEYS = new Set(['Escape', 'KeyP'])
+const RIFT_KEYS = new Set(['KeyC', 'KeyV'])
 
 class Input {
   private down = new Set<string>()
@@ -28,6 +29,9 @@ class Input {
   fire = false
   precision = false
   special = false
+  /** Arcade: flip into / out of the Rift (edge-triggered). */
+  rift = false
+  private padRift = false
   pause = false
   usingPad = false
   alwaysFire = false
@@ -68,6 +72,8 @@ class Input {
     this.fire = this.alwaysFire || anyDown(FIRE_KEYS) || this.padFire
     this.precision = anyDown(PRECISION_KEYS) || this.padPrecision
     this.special = anyPressed(SPECIAL_KEYS) || this.padSpecial
+    this.rift = anyPressed(RIFT_KEYS) || this.padRift
+    this.padRift = false
     this.pause = anyPressed(PAUSE_KEYS) || this.padPause
     this.padSpecial = false
     this.padPause = false
@@ -110,7 +116,8 @@ class Input {
     if (b.some(Boolean) || Math.hypot(gp.axes[0] ?? 0, gp.axes[1] ?? 0) > 0.5) this.usingPad = true
     this.padFire = !!(b[0] || b[7] || b[5])
     this.padPrecision = !!(b[4] || b[6])
-    if (edge(2) || edge(3)) this.padSpecial = true
+    if (edge(2)) this.padSpecial = true
+    if (edge(3)) this.padRift = true
     if (edge(9)) { this.padPause = true; this.menuQ.push('back') }
     if (edge(0)) this.menuQ.push('confirm')
     if (edge(1)) this.menuQ.push('back')

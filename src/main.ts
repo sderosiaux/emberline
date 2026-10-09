@@ -16,7 +16,7 @@ import { registerArt_garden } from './render/art-garden'
 import { registerArt_m5 } from './render/art-m5'
 import { registerArt_m6 } from './render/art-m6'
 import { registerArt_m7 } from './render/art-m7'
-import { initBulletTextures } from './render/bullets'
+import { initBulletTextures, initLaserTextures } from './render/bullets'
 import { registerFxArt } from './render/fx-art'
 import { drawRef } from './data/enemies'
 import { getSprite, drawSprite } from './render/sprites'
@@ -28,6 +28,7 @@ registerProps()
 registerBossArt()
 registerArt_m2(); registerArt_m3(); registerArt_m4(); registerArt_garden(); registerArt_m5(); registerArt_m6(); registerArt_m7()
 initBulletTextures()
+initLaserTextures()
 registerFxArt()
 drawRef.sprite = (ctx, key, x, y, rot, scale, alpha, flash) => drawSprite(ctx, getSprite(key), x, y, rot, scale, alpha, flash)
 

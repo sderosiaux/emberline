@@ -69,8 +69,13 @@ export class Bullet {
   onPop: ((w: import('./world').World, b: Bullet) => void) | null = null
   popOnExpire = false
   scale = 1
+  /** Arcade: which reality the bullet lives in (0 = normal, 1 = the Rift). Only same-layer bullets hurt. */
+  layer = 0
+  /** Arcade: already counted as a graze. */
+  grazed = false
   reset() {
     this.active = true
+    this.layer = 0; this.grazed = false
     this.ax = 0; this.ay = 0; this.curve = 0; this.age = 0; this.hp = 0; this.homing = 0; this.maxSpeed = 0
     this.arm = 0; this.onPop = null; this.popOnExpire = false; this.scale = 1; this.ttl = 8
     return this
@@ -124,7 +129,7 @@ export class Enemy {
   visibleAlpha = 1
 }
 
-export const enum PickupKind { Credit, CreditBig, Repair, Special, Core, Shield }
+export const enum PickupKind { Credit, CreditBig, Repair, Special, Core, Shield, Power, PowerBig, Point, Weapon }
 
 export class Pickup {
   active = false

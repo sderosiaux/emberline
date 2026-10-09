@@ -3,12 +3,14 @@ import { drawHud, drawHudOverlays, drawHudIdle } from './render/hud'
 import { input } from './core/input'
 import { audio } from './audio/audio'
 import { Session, type MissionResult } from './game/session'
-import { MISSIONS } from './data/missions'
+import { MISSIONS, ARCADE_STAGES } from './data/missions'
 import { newCampaign, type Campaign, type DifficultyId, DIFFICULTIES } from './game/campaign'
 import { nextMissionId, missionIndex, applyResult } from './game/progress'
 import * as save from './game/save'
 import type { Settings, Records } from './game/save'
 import { Nav } from './ui/nav'
+import { arcadeStageScreen, arcadeOverScreen } from './ui/arcade-screens'
+import { newArcadeRun, type ArcadeRun } from './game/arcade'
 import { titleScreen, briefingScreen, pauseScreen, failedScreen, resultsScreen, endingScreen, settingsModal, difficultyModal } from './ui/screens'
 import { hangarScreen } from './ui/hangar'
 import { Attract } from './ui/attract'
@@ -117,6 +119,7 @@ export class App {
   // ───────────── flow ─────────────
 
   toTitle() {
+    this.arcade = null
     this.endSession()
     audio.music.play('title', { fade: 1.5 })
     audio.music.setIntensity(2)
@@ -155,7 +158,48 @@ export class App {
     this.show(hangarScreen(this))
   }
 
+  /** Arcade run in progress (null when playing the campaign). */
+  arcade: ArcadeRun | null = null
+
+  startArcade() {
+    this.arcade = newArcadeRun()
+    this.launchArcadeStage()
+  }
+
+  launchArcadeStage() {
+    const run = this.arcade!
+    this.endSession()
+    this.session = new Session(MISSIONS[ARCADE_STAGES[run.stage]], null, run.stage, run)
+    this.applySessionSettings()
+    this.paused = false
+    this.show({ el: document.createElement('div'), backdrop: 'game' })
+    document.body.classList.add('hide-cursor')
+  }
+
+  private applySessionSettings() {
+    const s = this.session!
+    s.hud.showFps = this.settings.showFps
+    s.world.shakeScale = this.settings.shake === 'full' ? 1 : this.settings.shake === 'reduced' ? 0.4 : 0
+    s.world.parts.density = this.settings.effects === 'high' ? 1 : 0.5
+  }
+
+  private arcadeRecord() {
+    const run = this.arcade!
+    if (run.score > this.records.arcadeBest) { this.records.arcadeBest = run.score; save.saveRecords(this.records) }
+  }
+
+  /** Continue after game over: the run goes on, the score counter resets (arcade convention). */
+  continueArcade() {
+    const run = this.arcade!
+    run.continues++
+    run.score = 0
+    run.lives = 3
+    run.bombs = 3
+    this.launchArcadeStage()
+  }
+
   launch() {
+    if (this.arcade) { this.launchArcadeStage(); return }
     const c = this.campaign!
     const id = nextMissionId(c)
     if (!id) return
@@ -171,6 +215,12 @@ export class App {
   }
 
   retry() { this.launch() }
+
+  leaveArcade() {
+    if (this.arcade) this.arcadeRecord()
+    this.arcade = null
+    this.toTitle()
+  }
 
   pause() {
     if (!this.session) return
@@ -188,6 +238,7 @@ export class App {
 
   abandon() {
     this.resume()
+    if (this.arcade) { this.leaveArcade(); return }
     this.campaign!.stats.deaths++
     save.saveCampaign(this.campaign!)
     this.toHangar()
@@ -202,6 +253,15 @@ export class App {
 
   private onWon() {
     const s = this.session!
+    if (this.arcade) {
+      const run = this.arcade
+      run.stage++
+      this.arcadeRecord()
+      this.endSession()
+      audio.music.play(run.stage >= ARCADE_STAGES.length ? 'ending' : 'hangar', { fade: 2 })
+      this.show(arcadeStageScreen(this, run, s.mission.name, run.stage >= ARCADE_STAGES.length))
+      return
+    }
     const c = this.campaign!
     const r: MissionResult = s.result(missionIndex(c))
     this.campaign = applyResult(c, r)
@@ -217,6 +277,12 @@ export class App {
   }
 
   private onLost() {
+    if (this.arcade) {
+      this.arcadeRecord()
+      document.body.classList.remove('hide-cursor')
+      this.show({ ...arcadeOverScreen(this, this.arcade), backdrop: 'game' })
+      return
+    }
     this.campaign!.stats.deaths++
     save.saveCampaign(this.campaign!)
     document.body.classList.remove('hide-cursor')
@@ -298,6 +364,7 @@ export class App {
   }
 
   private hudT = 0
+  private riftLook = false
   private hudKey = ''
   private fieldPausedDrawn = false
 
@@ -310,7 +377,10 @@ export class App {
     this.hudKey = key
     r.showField(mode !== 'paper')
     if (mode === 'game' && s) {
-      s.hud.bank = this.campaign?.credits ?? 0
+      s.hud.bank = this.arcade ? this.records.arcadeBest : this.campaign?.credits ?? 0
+      // the Rift: the whole playfield flips into a negative, red-shifted reality (GPU-composited CSS filter, no per-pixel cost)
+      const rift = !!s.world.arcade?.inRift
+      if (rift !== this.riftLook) { this.riftLook = rift; r.canvas.style.filter = rift ? 'invert(1) hue-rotate(160deg) saturate(1.35) contrast(1.05)' : '' }
       // Side panels change slowly: 20 Hz is plenty and saves a full-screen repaint per frame.
       this.hudT -= dt
       if (hudStale || this.hudT <= 0 || this.paused) {
@@ -324,6 +394,7 @@ export class App {
       return
     }
     this.fieldPausedDrawn = false
+    if (this.riftLook) { this.riftLook = false; r.canvas.style.filter = '' }
     if (hudStale) {
       const h = r.beginHud()
       h.fillStyle = T.paper

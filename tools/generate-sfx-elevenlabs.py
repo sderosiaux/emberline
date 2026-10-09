@@ -78,6 +78,22 @@ S = {
   'ui_deny': ('UI error, soft muted buzz, not annoying', 0.5, 1, 0.25),
   'ui_upgrade': ('Weapon upgrade installed, mechanical lock-in clunk with a rising power-up chime', 1.0, 1, 0.9),
 }
+S.update({
+  # arcade mode
+  'graze': ('Bullet whizzing past very close, tiny sharp air hiss with a glassy tick, extremely short', 0.5, 3, 0.1),
+  'rift_enter': ('Tearing into a parallel dimension, deep reversed whoosh with a distorted metallic shriek and sub drop', 1.5, 1, 1.2),
+  'rift_exit': ('Snapping back to reality from another dimension, sucking reverse swell ending in a clean glassy pop', 1.2, 1, 0.9),
+  'rift_ready': ('Dimensional energy fully charged, eerie rising shimmer with a soft click, short notification', 0.8, 1, 0.7),
+  'bomb': ('Screen-clearing smart bomb, huge bright energy detonation with a deep boom and a sweeping shockwave', 2.5, 1, 2.4),
+  'spell_declare': ('Boss declares a special attack, dramatic magical chime with a deep resonant gong and rising choir-like synth', 2.0, 1, 1.8),
+  'spell_capture': ('Bonus captured, triumphant sparkling arpeggio chime with coins, short reward stinger', 2.0, 1, 1.8),
+  'item_power': ('Power-up item collected, quick bright rising blip with a crunchy edge', 0.5, 2, 0.2),
+  'item_point': ('Point item collected, small crystal tink, very short and light', 0.5, 3, 0.12),
+})
+# arcade sounds borrow the level of the closest existing sound so they slot into the mix
+REF = {'graze': 'hit_small', 'item_power': 'pickup_special', 'item_point': 'pickup_credit', 'rift_enter': 'special_phase',
+       'rift_exit': 'special_phase', 'rift_ready': 'special_ready', 'bomb': 'special_nova', 'spell_declare': 'boss_phase', 'spell_capture': 'secret'}
+
 LOOPS = {
   'beam': ('Continuous powerful energy beam hum, sustained searing laser drone, seamless loop', 3.0),
   'charge': ('Continuous energy charging whine, sustained rising electric hum, seamless loop', 2.0),
@@ -125,7 +141,7 @@ def reference_level(name):
 
 def make(name):
     prompt, dur, n, max_len = S[name]
-    ref = reference_level(name)
+    ref = reference_level(REF.get(name, name))
     files = []
     for i in range(n):
         x = clean(call(prompt, dur), max_len)
@@ -166,6 +182,7 @@ if __name__ == '__main__':
                 name, files = res
                 old = [f for f in man['sfx'].get(name, {}).get('files', []) if f.endswith('.wav') and '_e' not in f]
                 man['sfx'].setdefault(name, {})['files'] = files
+                if 'gain' not in man['sfx'][name]: man['sfx'][name]['gain'] = man['sfx'][REF.get(name, name)].get('gain', 0.3)
                 for f in old:  # retire the synthesized takes
                     try: os.remove(os.path.join(OUT, f))
                     except FileNotFoundError: pass

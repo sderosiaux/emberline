@@ -38,6 +38,8 @@ TRACKS = {
             'dramatic orchestral hits, tension and danger.',
     'final_boss': 'The most epic final boss battle, 165 BPM, D minor. Full orchestra with synths, massive drums, a synthetic choir pad '
                   'texture (no human voice, no words), soaring heroic lead, dark dramatic harmony, relentless intensity.',
+    'rift': 'Dark aggressive alternate-dimension version of a shmup stage theme, 150 BPM, F sharp minor. Reversed cymbals, '
+            'detuned distorted synth bass, glitchy stuttering arpeggios, pounding industrial drums, eerie dissonant pads. Unsettling and intense.',
     'ending': 'Warm, reflective ending theme after the war, 80 BPM, D major. Gentle piano, soft strings, a warm synth pad, '
               'a tender reprise of a heroic melody. Bittersweet and peaceful.',
 }

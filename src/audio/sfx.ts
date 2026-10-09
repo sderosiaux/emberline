@@ -8,7 +8,7 @@ import { type Mixer, mtof } from './core'
 import { playNote, playPad, type SynthPreset } from './instruments'
 import { type Dst, fm, formant, noise, tone } from './synth'
 import type { Sample } from './samples'
-import type { SfxName } from './types'
+import type { ArcadeSfx, SfxName } from './types'
 
 export interface SfxCtx extends Dst {
   t: number
@@ -74,7 +74,7 @@ function notes(c: SfxCtx, list: [number, number, number][], P: SynthPreset, semi
   for (const [at, midi, len] of list) playNote(c.ctx, c.out, c.t + at, len, midi + semis, 1, P)
 }
 
-export const SFX: Record<SfxName, SfxDef> = {
+const BASE_SFX: Record<Exclude<SfxName, ArcadeSfx>, SfxDef> = {
   // ------------------------------------------------ player weapons
   shot_pulse: { lvl: 2.5, cap: 4, gap: 0.035, prio: 1, jitter: 0.04, fn: (c) => {
     tone(c, c.t, { w: 'square', f: 900 * c.p, f2: 430 * c.p, dur: 0.07, vol: 0.075, flt: { type: 'lowpass', f: 3500 } })
@@ -472,4 +472,17 @@ export function spawnSample(mx: Mixer, name: SfxName, s: Sample, t: number, vol:
   src.connect(gain)
   src.start(t)
   return { gain, tail, dur: s.buf.duration / rate, src }
+}
+
+export const SFX: Record<SfxName, SfxDef> = {
+  ...BASE_SFX,
+  graze: { ...BASE_SFX.hit_small, gap: 0.03, cap: 3 },
+  rift_enter: { ...BASE_SFX.special_phase, gap: 0.2 },
+  rift_exit: { ...BASE_SFX.shield_restored, gap: 0.2 },
+  rift_ready: { ...BASE_SFX.special_ready, gap: 0.5 },
+  bomb: { ...BASE_SFX.special_nova, gap: 0.3 },
+  spell_declare: { ...BASE_SFX.boss_phase, gap: 0.5 },
+  spell_capture: { ...BASE_SFX.secret, gap: 0.5 },
+  item_power: { ...BASE_SFX.pickup_special, gap: 0.04, cap: 3 },
+  item_point: { ...BASE_SFX.pickup_credit, gap: 0.025, cap: 4 },
 }

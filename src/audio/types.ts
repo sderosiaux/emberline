@@ -8,12 +8,16 @@ export type SfxName =
   | 'energy_empty' | 'boss_warning' | 'boss_phase' | 'boss_part' | 'secret'
   | 'ui_move' | 'ui_select' | 'ui_back' | 'ui_buy' | 'ui_sell' | 'ui_deny' | 'ui_upgrade'
   | 'mission_complete' | 'game_over' | 'radio' | 'player_death' | 'chain_reaction' | 'shield_gen_down'
+  | ArcadeSfx
+
+/** Arcade-mode sounds: sample-only, they reuse a nearby synth recipe as fallback. */
+export type ArcadeSfx = 'graze' | 'rift_enter' | 'rift_exit' | 'rift_ready' | 'bomb' | 'spell_declare' | 'spell_capture' | 'item_power' | 'item_point'
 
 export type LoopName = 'beam' | 'charge' | 'alarm'
 
 export type TrackId =
   | 'title' | 'hangar' | 'm1' | 'm2' | 'm3' | 'm4' | 'm5' | 'm6' | 'm7'
-  | 'secret' | 'boss' | 'final_boss' | 'ending'
+  | 'secret' | 'boss' | 'final_boss' | 'ending' | 'rift'
 
 export type Intensity = 0 | 1 | 2 | 3
 

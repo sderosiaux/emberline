@@ -2,7 +2,11 @@ import { World } from './world'
 import { LevelScript, LevelRunner, type MissionDef } from './level'
 import { createBackground, type Background } from '../render/backgrounds'
 import type { Campaign } from './campaign'
-import { DIFFICULTIES } from './campaign'
+import { DIFFICULTIES, type Loadout } from './campaign'
+import { Arcade, type ArcadeRun } from './arcade'
+
+/** Arcade ship: one gun that grows with power items; drones join at higher power. */
+const ARCADE_LOADOUT: Loadout = { front: { id: 'pulse', level: 1 }, rear: null, podL: null, podR: null, reactor: 'r5', shield: 's1', hull: 'h1', special: 'nova' }
 import type { HudState, RadioLine } from '../render/hud'
 import { audio } from '../audio/audio'
 import { PH } from './consts'
@@ -44,9 +48,11 @@ export class Session {
   hullDamage = 0
   private lastHull: number
 
-  constructor(public mission: MissionDef, public campaign: Campaign, missionIndex: number) {
-    const diff = DIFFICULTIES[campaign.difficulty]
-    this.world = new World(campaign.loadout, diff)
+  /** campaign = null in arcade mode, where `run` carries score, lives and power between stages. */
+  constructor(public mission: MissionDef, public campaign: Campaign | null, missionIndex: number, public run: ArcadeRun | null = null) {
+    const diff = DIFFICULTIES[campaign?.difficulty ?? 'gunship']
+    this.world = new World(campaign?.loadout ?? ARCADE_LOADOUT, diff)
+    if (run) this.world.arcade = new Arcade(run, this.world)
     this.world.scroll = mission.scroll
     this.world.hpScale = 1 + 0.22 * missionIndex
     this.world.creditScale = 1 + 0.3 * missionIndex
@@ -60,7 +66,7 @@ export class Session {
     this.lastHull = this.world.player.hull
     this.hud = {
       mission, radio: [], banner: { text: mission.name, sub: `Mission ${mission.num}`, t: 0 }, progress: 0,
-      bank: campaign.credits, fps: 60, showFps: false, secretToast: null, specialHint: 0,
+      bank: campaign?.credits ?? 0, fps: 60, showFps: false, secretToast: null, specialHint: 0,
     }
     audio.music.play(mission.track, { fade: 1.5 })
     audio.music.setIntensity(2)

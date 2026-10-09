@@ -30,12 +30,19 @@ The build uses relative paths, so `dist/` can be dropped into any folder or itch
 |---|---|---|
 | Move | Arrows / WASD | Left stick / d-pad |
 | Fire (hold) | Space / Z / J | A / RT / RB |
-| Special | X / K | X / Y |
+| Special (campaign) / Bomb (arcade) | X / K | X |
+| Flip into the Rift (arcade) | C / V | Y |
 | Precision (slow move) | Shift / L | LB / LT |
 | Pause | Esc / P | Start |
 | Menus | Arrows, Enter, Esc; Q/E switch hangar slots | Stick, A, B, LB/RB |
 
 "Always fire" is in Settings if you'd rather not hold the button. The white dot in the middle of the ship is your whole hitbox.
+
+## Arcade mode
+
+A separate danmaku-flavoured run picked from the title screen: five stages back to back, no hangar. One hit costs a life, X bombs the screen clear, enemies drop red power items (they grow your gun and add drones) and blue point items (worth full value above the collection line near the top, which also pulls every item to you). Holding Shift focuses: the ship slows and the gun tightens into a stronger stream. Every boss phase is a timed spell card; clear it without dying or bombing for a capture bonus.
+
+Grazing bullets fills the Rift gauge. With one full segment, C flips you into the Rift, a negative-red copy of the same stage: only the bullets of the layer you're in can hit you, so flipping doubles as an escape, and everything scores ×3 with stronger shots. The scroll speeds up, the enemies fire harder and the gauge drains until you're thrown back out. The Rift has its own track and sound set (Lyria, ElevenLabs).
 
 ## How the game fits together
 
@@ -56,13 +63,13 @@ Add `?debug` to the URL.
 | Key | Effect |
 |---|---|
 | F1 | God mode |
-| F2 | +10,000 credits |
+| F2 | +10,000 credits (campaign) · 99 lives and bombs (arcade) |
 | F3 | Destroy everything on screen |
 | F4 | Skip to the boss |
 | F6 | Slow motion |
 | F7 | Hitboxes |
 | F8 | FPS and entity counts |
-| F9 | Front gun +1 level |
+| F9 | Front gun +1 level (campaign) · next weapon (arcade) |
 | F10 | Win the mission |
 
 Debug mode also exposes `window.__emb` for automated playtesting: `start(missionId, {loadout, difficulty})`, `autopilot(true)`, `god(true)`, `simulate(seconds)` (headless fast-forward), `state()`, `skipToBoss()`.

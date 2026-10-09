@@ -121,6 +121,8 @@ export class World {
   bossName = ''
   bossParts: Enemy[] = []
   god = false
+  /** Arcade mode state (null in the campaign). */
+  arcade: Arcade | null = null
   /** Mission tier hp multiplier for regular enemies (later missions field sturdier craft). */
   hpScale = 1
   /** Mission tier credit multiplier (later missions pay better per kill). */
@@ -197,6 +199,7 @@ export class World {
     b.vx = Math.cos(ang) * s; b.vy = Math.sin(ang) * s
     b.kind = kind
     b.dmg = dmg * this.diff.damageTaken
+    if (this.arcade) b.layer = this.arcade.layer
     b.r = r || BULLET_R[kind]
     return b
   }
@@ -220,6 +223,8 @@ export class World {
   }
 
   pickup(kind: PickupKind, x: number, y: number, value = 0, id = '') {
+    // arcade has no money: anything that would pay credits pays score instead
+    if (this.arcade && (kind === PickupKind.Credit || kind === PickupKind.CreditBig)) kind = PickupKind.Point
     const p = this.pickups.spawn()
     if (!p) return
     p.reset()
@@ -254,7 +259,7 @@ export class World {
       if (Math.random() < 0.4) this.parts.spawn(P.Glow, hx, hy, 0, 0, 0.08, 7, 2, C.cyan)
       return 0
     }
-    const d = dmg * e.armor
+    const d = dmg * e.armor * (this.arcade?.inRift ? ARCADE.riftDamage : 1)
     e.hp -= d
     e.flash = e.maxHp > 400 ? Math.max(e.flash, 0.45) : 1
     e.hitThisFrame = true
@@ -301,11 +306,12 @@ export class World {
     }
     this.stats.maxChain = Math.max(this.stats.maxChain, this.chain)
     const multBefore = this.chainMult()
-    const pts = Math.round(def.score * multBefore * (e.elite ? 3 : 1))
+    const pts = Math.round(def.score * multBefore * (e.elite ? 3 : 1) * (this.arcade?.inRift ? ARCADE.riftScore : 1))
     this.score += pts
     if (pts >= 300) this.floater(e.x, e.y - 10, pts.toLocaleString('en-US'), e.elite ? '#ffcc33' : '#ffffff')
     const credits = Math.round(def.credits * this.diff.creditMul * (e.elite ? 3 : 1) * this.creditScale)
-    this.dropCredits(e.x, e.y, credits)
+    if (this.arcade) this.arcade.drop(this, e)
+    else this.dropCredits(e.x, e.y, credits)
     this.player.onKill(def.charge * (e.elite ? 1.5 : 1))
     if (this.diff.revenge && !ground && def.hp < 300 && e.y < this.player.y - 60) {
       const b = this.fire(e.x, e.y, this.aim(e.x, e.y, 170), 170, BulletKind.Shard, 8)
@@ -332,6 +338,7 @@ export class World {
 
     if (this.chainTimer > 0) { this.chainTimer -= dt; if (this.chainTimer <= 0) this.chain = 0 }
 
+    this.arcade?.update(this, dt)
     this.player.update(dt)
     this.updateShots(dt)
     this.updateEnemies(dt)
@@ -482,6 +489,15 @@ export class World {
       if (b.kind === BulletKind.Missile && Math.random() < 0.5) this.parts.spawn(P.Smoke, b.x - b.vx * 0.03, b.y - b.vy * 0.03, 0, 0, 0.5, 3, 7, C.smokeLight, 0)
       if (b.x < -60 || b.x > PW + 60 || b.y < -80 || b.y > PH + 60) { this.bullets.kill(b); continue }
       if (b.age < b.arm) continue
+      if (p.alive && this.arcade) {
+        const dx = b.x - p.x, dy = b.y - p.y
+        if (this.arcade.touch(this, b, dx * dx + dy * dy, pr) === 'hit') {
+          p.hurt(b.dmg, b.x, b.y)
+          if (b.onPop) b.onPop(this, b)
+          this.bullets.kill(b)
+        }
+        continue
+      }
       if (p.alive) {
         const dx = b.x - p.x, dy = b.y - p.y, rr = b.r * b.scale + pr
         if (dx * dx + dy * dy < rr * rr) {
@@ -591,7 +607,7 @@ export class World {
       k.age += dt
       const dx = p.x - k.x, dy = p.y - k.y
       const d2 = dx * dx + dy * dy
-      if (p.alive && (k.magnet || d2 < mag * mag)) {
+      if (p.alive && k.kind !== PickupKind.Weapon && (k.magnet || d2 < mag * mag)) {
         k.magnet = true
         const d = Math.sqrt(d2) || 1
         const sp = 520 + k.age * 200
@@ -612,6 +628,16 @@ export class World {
   private collect(k: Pickup) {
     const p = this.player
     if (this.preview) { this.pickups.kill(k); return }
+    if (this.arcade && k.kind === PickupKind.Weapon) {
+      this.arcade.collectWeapon(this, k.value, k.age, k.x, k.y)
+      this.pickups.kill(k)
+      return
+    }
+    if (this.arcade && (k.kind === PickupKind.Power || k.kind === PickupKind.PowerBig || k.kind === PickupKind.Point)) {
+      this.arcade.collect(this, k.kind, k.value, k.x, k.y)
+      this.pickups.kill(k)
+      return
+    }
     const pan = (k.x / PW) * 2 - 1
     switch (k.kind) {
       case PickupKind.Credit:
@@ -697,3 +723,4 @@ const cellY = (y: number) => clamp(Math.floor((y + 200) / GRID), 0, GROWS - 1)
 
 // late imports to avoid cycles at module-eval time
 import { onShotExpire, onShotHit, steerShot, ShotKind, tickBurn } from './weapons'
+import { Arcade, ARCADE } from './arcade'

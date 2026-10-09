@@ -1,13 +1,15 @@
 import type { World } from '../game/world'
 import type { Background } from './backgrounds'
 import { getSprite, drawSprite, drawShadow, glowTexture, hasSprite, setSpriteTint } from './sprites'
-import { bulletTex, bulletFx } from './bullets'
+import { bulletTex, bulletFx, laserFx } from './bullets'
 import { PW, PH, SCREEN_W, SCREEN_H, FIELD_W, ZOOM } from '../game/consts'
 import { Sunline, Aegis, Lantern, Halo } from '../game/weapons'
 import { specialFx } from '../game/specials'
+import { Arcade, CAPSULE_CYCLE } from '../game/arcade'
 import { PickupKind, BulletKind } from '../game/entities'
 import type { Enemy } from '../game/entities'
 import { TAU } from '../core/math'
+import { P, C } from './particles'
 import { T } from '../ui/theme'
 
 /**
@@ -148,11 +150,15 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
 
   // pickups
   for (const k of w.pickups.items) {
-    if (!k.active) continue
+    if (!k.active || k.kind !== PickupKind.Weapon) continue
+    drawCapsule(c, k.x, k.y, Arcade.capsuleWeapon(k.value, k.age), k.age)
+  }
+  for (const k of w.pickups.items) {
+    if (!k.active || k.kind === PickupKind.Weapon) continue
     const key = PK[k.kind]
     const bob = Math.sin(k.age * 6 + k.x) * 0.12
     c.globalCompositeOperation = 'lighter'
-    const col = k.kind === PickupKind.Core ? '#b58cff' : k.kind === PickupKind.Repair ? '#6fd3ff' : k.kind === PickupKind.Special ? '#ff9a3d' : '#c6ff3d'
+    const col = k.kind === PickupKind.Core ? '#b58cff' : k.kind === PickupKind.Repair || k.kind === PickupKind.Point ? '#6fd3ff' : k.kind === PickupKind.Special ? '#ff9a3d' : k.kind === PickupKind.Power || k.kind === PickupKind.PowerBig ? '#ff5a5a' : '#c6ff3d'
     const gs = k.kind === PickupKind.Credit ? 16 : 26
     c.globalAlpha = 0.5 + 0.2 * Math.sin(k.age * 8)
     c.drawImage(glowTexture(col, 64, 0.1), k.x - gs, k.y - gs, gs * 2, gs * 2)
@@ -193,6 +199,7 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
 const PK: Record<PickupKind, string> = {
   [PickupKind.Credit]: 'pk_credit', [PickupKind.CreditBig]: 'pk_credit_big', [PickupKind.Repair]: 'pk_repair',
   [PickupKind.Special]: 'pk_special', [PickupKind.Core]: 'pk_core', [PickupKind.Shield]: 'pk_shield',
+  [PickupKind.Power]: 'pk_power', [PickupKind.PowerBig]: 'pk_power_big', [PickupKind.Point]: 'pk_point', [PickupKind.Weapon]: 'pk_point',
 }
 
 function drawEnemy(c: CanvasRenderingContext2D, w: World, e: Enemy) {
@@ -380,7 +387,8 @@ function drawPlayer(c: CanvasRenderingContext2D, w: World) {
   const sx = bank < -0.35 ? -1 : 1
   c.save()
   c.translate(p.x, p.y)
-  c.scale(sx * (1 - Math.abs(bank) * 0.06), 1)
+  const roll = w.arcade ? Math.cos((1 - w.arcade.roll) * Math.PI * 2) : 1
+  c.scale(sx * (1 - Math.abs(bank) * 0.06) * (w.arcade?.roll ? roll : 1), 1)
   c.globalAlpha = alpha
   c.drawImage(sp.img, -sp.w / 2, -sp.h / 2, sp.w, sp.h)
   if (p.hitFlash > 0) { c.globalAlpha = Math.min(1, p.hitFlash); c.drawImage(sp.flash, -sp.w / 2, -sp.h / 2, sp.w, sp.h) }
@@ -442,29 +450,95 @@ function drawSpecials(c: CanvasRenderingContext2D, w: World) {
 }
 
 function drawLasers(c: CanvasRenderingContext2D, w: World) {
-  for (const l of w.lasers) {
-    const ex = l.x + Math.cos(l.ang) * l.len, ey = l.y + Math.sin(l.ang) * l.len
+  if (!w.lasers.length) return
+  const { glow, core, flow, star } = laserFx
+  const t = w.time
+  for (let li = 0; li < w.lasers.length; li++) {
+    const l = w.lasers[li]
+    const cs = Math.cos(l.ang), sn = Math.sin(l.ang)
+    c.save()
+    c.transform(cs, sn, -sn, cs, l.x, l.y) // beam space: origin at the emitter, beam along +x
     if (l.age < l.warn) {
+      // ── telegraph: flickering sight line that thickens, energy sucked into a growing charge orb
       const k = l.age / l.warn
-      c.strokeStyle = `rgba(255,46,136,${0.25 + 0.5 * k})`
-      c.lineWidth = 1 + k * 2
-      c.setLineDash([10, 8])
-      c.lineDashOffset = -w.time * 80
-      c.beginPath(); c.moveTo(l.x, l.y); c.lineTo(ex, ey); c.stroke()
-      c.setLineDash([])
-    } else {
-      c.lineCap = 'round'
-      c.strokeStyle = '#2a0718'
-      c.lineWidth = l.width + 4
-      c.beginPath(); c.moveTo(l.x, l.y); c.lineTo(ex, ey); c.stroke()
+      const flick = 0.55 + 0.45 * Math.sin(t * 40 + li)
       c.globalCompositeOperation = 'lighter'
-      c.strokeStyle = '#ff2e88'
-      c.lineWidth = l.width * (0.9 + Math.sin(w.time * 50) * 0.1)
-      c.stroke()
-      c.strokeStyle = '#fff4fa'
-      c.lineWidth = l.width * 0.35
-      c.stroke()
+      c.globalAlpha = (0.15 + 0.45 * k) * flick
+      c.drawImage(core!, 0, -(1 + k * 3), l.len, 2 + k * 6)
+      c.globalAlpha = 0.25 * k
+      c.drawImage(glow!, 0, -(4 + k * 10), l.len, 8 + k * 20)
+      // converging motes
+      for (let i = 0; i < 6; i++) {
+        const ph = (t * 1.8 + i / 6) % 1
+        const r = (1 - ph) * (26 + 18 * k)
+        const a = i * 1.047 + t * 2
+        c.globalAlpha = ph * 0.9
+        c.drawImage(glowTexture('#ff7ac0', 32, 0.3), Math.cos(a) * r - 3, Math.sin(a) * r - 3, 6, 6)
+      }
+      const orb = 4 + k * 14 * (0.9 + 0.1 * Math.sin(t * 30))
+      c.globalAlpha = 0.9
+      c.drawImage(glowTexture('#ff3d9a', 64, 0.15), -orb * 1.8, -orb * 1.8, orb * 3.6, orb * 3.6)
+      c.drawImage(glowTexture('#ffffff', 64, 0.3), -orb * 0.6, -orb * 0.6, orb * 1.2, orb * 1.2)
+      c.globalAlpha = 1
       c.globalCompositeOperation = 'source-over'
+      c.restore()
+      continue
+    }
+    // ── firing beam
+    const fa = l.age - l.warn
+    const grow = Math.min(1, fa / 0.07)                         // shoots out of the emitter
+    const fade = Math.min(1, (l.warn + l.life - l.age) / 0.15)    // thins out before it dies
+    const len = l.len * grow
+    const wd = l.width * fade * (1 + 0.08 * Math.sin(t * 55 + li))
+    // dark rims first: keep the hazard readable on bright ground (sand, snow, station hull)
+    c.globalAlpha = 0.55 * fade
+    c.fillStyle = '#2a0718'
+    c.fillRect(0, -wd * 0.62, len, 1.6)
+    c.fillRect(0, wd * 0.62 - 1.6, len, 1.6)
+    // soft magenta haze, visible even where additive light would wash out
+    c.globalAlpha = 0.35 * fade
+    c.drawImage(glow!, 0, -wd * 2.2, len, wd * 4.4)
+    c.globalCompositeOperation = 'lighter'
+    c.globalAlpha = 0.8 * fade
+    c.drawImage(glow!, 0, -wd * 2.6, len, wd * 5.2)
+    c.globalAlpha = fade
+    c.drawImage(core!, 0, -wd * 0.7, len, wd * 1.4)
+    // energy streaming along the beam
+    const off = (t * 900) % 256
+    c.globalAlpha = 0.85 * fade
+    for (let x = -off; x < len; x += 256) {
+      const segW = Math.min(256, len - x)
+      if (segW <= 0) break
+      const sx0 = x < 0 ? -x : 0
+      c.drawImage(flow!, sx0 * (256 / 256), 0, segW - sx0, 32, Math.max(0, x), -wd * 0.45, segW - sx0, wd * 0.9)
+    }
+    // crackling arcs along the edges
+    c.strokeStyle = 'rgba(255,220,240,0.9)'
+    c.lineWidth = 1
+    for (let i = 0; i < 3; i++) {
+      if (Math.random() < 0.4) continue
+      const x0 = Math.random() * len, seg = 30 + Math.random() * 50
+      const side = Math.random() < 0.5 ? -1 : 1
+      c.beginPath()
+      c.moveTo(x0, side * wd * 0.4)
+      for (let k = 1; k <= 4; k++) c.lineTo(x0 + (seg * k) / 4, side * (wd * 0.4 + Math.random() * wd * 0.9))
+      c.stroke()
+    }
+    // muzzle flare + impact sparks
+    const fl = (wd * 2.4 + 10) * (0.9 + 0.2 * Math.random())
+    c.globalAlpha = fade
+    c.drawImage(glowTexture('#ff4da6', 64, 0.2), -fl, -fl, fl * 2, fl * 2)
+    c.save(); c.rotate(t * 3)
+    c.drawImage(star!, -fl * 1.3, -fl * 1.3, fl * 2.6, fl * 2.6)
+    c.restore()
+    c.drawImage(glowTexture('#ffffff', 64, 0.35), -fl * 0.4, -fl * 0.4, fl * 0.8, fl * 0.8)
+    c.globalAlpha = 1
+    c.globalCompositeOperation = 'source-over'
+    c.restore()
+    // impact where the beam leaves the field, or sparks spraying if it ends on screen
+    const ex = l.x + cs * len, ey = l.y + sn * len
+    if (ex > -10 && ex < PW + 10 && ey > -10 && ey < PH + 10 && Math.random() < 0.6) {
+      w.parts.spawn(P.Spark, ex, ey, (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300, 0.2, 1.4, 0.5, C.magenta, 4)
     }
   }
 }
@@ -479,7 +553,7 @@ function drawBullets(c: CanvasRenderingContext2D, w: World) {
   c.globalCompositeOperation = 'lighter'
   for (let i = 0; i < items.length; i++) {
     const b = items[i]
-    if (!b.active || b.kind === BulletKind.Missile) continue
+    if (!b.active || b.kind === BulletKind.Missile || (w.arcade && b.layer !== w.arcade.layer)) continue
     const pulse = 1 + 0.18 * Math.sin(time * 13 + i * 1.7)
     const rr = b.r * b.scale * 3.1 * pulse
     c.globalAlpha = b.age < b.arm ? 0.25 : 0.5
@@ -507,10 +581,12 @@ function drawBullets(c: CanvasRenderingContext2D, w: World) {
     const b = items[i]
     if (!b.active) continue
     const t = bulletTex(b.kind)
+    const ghost = !!w.arcade && b.layer !== w.arcade.layer
     const breathe = ORBISH.has(b.kind) ? 1 + 0.07 * Math.sin(time * 16 + i * 1.7) : 1
     const s = b.scale * breathe * (b.age < 0.08 ? 0.5 + b.age * 6 : 1)
     const bw = t.w * s, bh = t.h * s
     if (b.arm > 0 && b.age < b.arm) c.globalAlpha = 0.5
+    if (ghost) c.globalAlpha = 0.2
     if (t.rotate) {
       const a = b.kind === BulletKind.Shard ? b.age * 14 : Math.atan2(b.vy, b.vx) - Math.PI / 2
       const cs = Math.cos(a), sn = Math.sin(a)
@@ -551,4 +627,30 @@ function drawFloaters(c: CanvasRenderingContext2D, w: World) {
     c.fillText(f.text, f.x, f.y)
   }
   c.globalAlpha = 1
+}
+
+/** Arcade weapon capsule: colour + letter of the weapon it currently offers, flipping like a coin when it changes. */
+function drawCapsule(c: CanvasRenderingContext2D, x: number, y: number, wp: { letter: string; color: string }, age: number) {
+  const phase = (age % CAPSULE_CYCLE) / CAPSULE_CYCLE
+  const flip = phase < 0.12 ? Math.abs(Math.cos((phase / 0.12) * Math.PI)) : 1
+  c.globalCompositeOperation = 'lighter'
+  c.globalAlpha = 0.6 + 0.2 * Math.sin(age * 9)
+  const g = glowTexture(wp.color, 64, 0.1)
+  c.drawImage(g, x - 26, y - 26, 52, 52)
+  c.globalAlpha = 1
+  c.globalCompositeOperation = 'source-over'
+  c.save()
+  c.translate(x, y + Math.sin(age * 3) * 2)
+  c.scale(flip, 1)
+  c.fillStyle = '#15131c'
+  c.beginPath(); c.roundRect(-12, -9, 24, 18, 9); c.fill()
+  const gr = c.createLinearGradient(0, -8, 0, 8)
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.3, wp.color); gr.addColorStop(1, '#222')
+  c.fillStyle = gr
+  c.beginPath(); c.roundRect(-10.5, -7.5, 21, 15, 7.5); c.fill()
+  c.fillStyle = '#ffffff'
+  c.font = '800 11px system-ui, sans-serif'
+  c.textAlign = 'center'; c.textBaseline = 'middle'
+  c.fillText(wp.letter, 0, 0.5)
+  c.restore()
 }

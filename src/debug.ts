@@ -15,13 +15,14 @@ export function installDebug(app: App) {
     const s = app.session
     switch (e.code) {
       case 'F1': if (w()) { w()!.god = !w()!.god; console.log('god', w()!.god) } break
-      case 'F2': if (app.campaign) { app.campaign.credits += 10000; save.saveCampaign(app.campaign); if (app.screen?.backdrop === 'paper') app.toHangar() } break
+      // arcade: F2 = effectively infinite lives and bombs for testing
+      case 'F2': if (app.arcade) { app.arcade.lives = 99; app.arcade.bombs = 99; console.log('arcade: 99 lives / 99 bombs') } else if (app.campaign) { app.campaign.credits += 10000; save.saveCampaign(app.campaign); if (app.screen?.backdrop === 'paper') app.toHangar() } break
       case 'F3': if (w()) for (const en of w()!.enemies) if (!en.bossPart) w()!.kill(en) ; break
       case 'F4': if (s) skipToBoss(app) ; break
       case 'F6': app.slowmo = app.slowmo === 1 ? 0.25 : 1; break
       case 'F7': app.renderer.showHitboxes = !app.renderer.showHitboxes; break
       case 'F8': if (s) s.hud.showFps = !s.hud.showFps; break
-      case 'F9': if (app.campaign) { const f = app.campaign.loadout.front; f.level = Math.min(ITEM[f.id].maxLevel, f.level + 1); save.saveCampaign(app.campaign) } break
+      case 'F9': if (app.arcade) { const ids = ['pulse', 'hail', 'sunline', 'hornet']; app.arcade.weapon = ids[(ids.indexOf(app.arcade.weapon) + 1) % ids.length]; app.arcade.power = Math.max(app.arcade.power, 2) } else if (app.campaign) { const f = app.campaign.loadout.front; f.level = Math.min(ITEM[f.id].maxLevel, f.level + 1); save.saveCampaign(app.campaign) } break
       case 'F10': if (s) { s.runner.done = true; for (const en of w()!.enemies) en.gone = true; w()!.flags.add('boss_dead') } break
       default: return
     }

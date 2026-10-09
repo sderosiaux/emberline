@@ -154,8 +154,11 @@ class Pulse extends Gun {
   cost() { return [2, 3, 4, 5, 6, 7, 7, 9][this.level - 1] }
   volley(x: number, y: number, pw: number) {
     const L = this.level, w = this.w
+    // arcade focus: the whole battery tightens into a concentrated stream and hits harder
+    const f = w.arcade && this.p.focus ? 0.3 : 1
+    const fd = f < 1 ? 1.3 : 1
     const b = (dx: number, deg: number, dmg: number, heavy = false, pierce = 0) =>
-      shoot(w, x + dx, y, UP + deg * DEG, 980, dmg * pw, heavy ? 'shot_pulse_heavy' : 'shot_pulse', { r: heavy ? 5 : 4, pierce })
+      shoot(w, x + dx * f, y, UP + deg * DEG * f * 0.6, 980, dmg * pw * fd, heavy ? 'shot_pulse_heavy' : 'shot_pulse', { r: heavy ? 5 : 4, pierce })
     const allPierce = L >= 7 ? 1 : 0
     if (L === 1) b(0, 0, 7)
     else if (L === 2) { b(-6, 0, 6); b(6, 0, 6) }
@@ -184,7 +187,8 @@ class Hail extends Gun {
   volley(x: number, y: number, pw: number) {
     const L = this.level, w = this.w
     const n = [5, 6, 7, 7, 8, 10, 10, 12][L - 1]
-    const spread = [40, 46, 50, 50, 52, 60, 60, 64][L - 1] * DEG
+    // arcade focus narrows the fan into a shotgun choke
+    const spread = [40, 46, 50, 50, 52, 60, 60, 64][L - 1] * DEG * (w.arcade && this.p.focus ? 0.4 : 1)
     const dmg = (L >= 3 ? 7 : 6) * pw
     const ttl = L >= 4 ? 0.48 : 0.36
     for (let i = 0; i < n; i++) {
@@ -215,7 +219,8 @@ class Hornet extends Gun {
     for (let i = 0; i < n; i++) {
       this.side = -this.side
       const spreadDeg = 25 + (i >> 1) * 14
-      const a = UP + this.side * spreadDeg * DEG * 2.2
+      // arcade focus launches the swarm straight ahead instead of fanning out
+      const a = UP + this.side * spreadDeg * DEG * 2.2 * (w.arcade && this.p.focus ? 0.25 : 1)
       shoot(w, x + this.side * 8, y + 6, a, 260, dmg, 'shot_missile', { r: 4, homing: 7, ttl: 2.2, splash, splashDmg: sd })
     }
   }
@@ -625,7 +630,8 @@ export abstract class Pod {
     this.y = p.y + 10
   }
   follow(dt: number) {
-    const tx = this.p.x + this.side * 34, ty = this.p.y + 8
+    const tight = this.w.arcade && this.p.focus
+    const tx = this.p.x + this.side * (tight ? 15 : 34), ty = this.p.y + (tight ? -16 : 8)
     const k = 1 - Math.exp(-dt * 14)
     this.x += (tx - this.x) * k
     this.y += (ty - this.y) * k

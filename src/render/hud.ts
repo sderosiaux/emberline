@@ -4,6 +4,7 @@ import { ITEM } from '../data/items'
 import { T } from '../ui/theme'
 import { PW, PH, HUD_X, HUD_W, SCREEN_H } from '../game/consts'
 import { clamp } from '../core/math'
+import { ARCADE_WEAPONS } from '../game/arcade'
 
 export interface RadioLine { who: string; text: string; tone: 'ally' | 'enemy' | 'odd'; t: number }
 export interface HudState {
@@ -92,6 +93,7 @@ const ghost = { hull: 1, shield: 1 }
 
 export function drawHud(c: CanvasRenderingContext2D, w: World, h: HudState) {
   c.drawImage(column(), HUD_X, 0, HUD_W, SCREEN_H)
+  if (w.arcade) { drawArcadeHud(c, w, h); return }
   const p = w.player
   const time = w.time
   const x0 = HUD_X + 20
@@ -241,6 +243,19 @@ export function drawHudOverlays(c: CanvasRenderingContext2D, w: World, h: HudSta
     c.fillRect(0, 0, PW, PH)
   }
   drawBossBar(c, w)
+  const sp = w.arcade?.spell
+  if (sp) {
+    const left = Math.max(0, 50 - sp.t)
+    c.textAlign = 'right'
+    c.font = `600 10px ${T.fontHead}`
+    c.fillStyle = sp.failed ? 'rgba(255,255,255,0.45)' : '#ffd0ea'
+    c.shadowColor = 'rgba(0,0,0,0.8)'; c.shadowBlur = 3
+    c.fillText(sp.name, PW - 14, 52)
+    c.font = `700 12px ${T.fontMono}`
+    c.fillStyle = left < 10 ? '#ff6a6a' : '#ffffff'
+    c.fillText(sp.failed ? 'FAILED' : left.toFixed(1), PW - 14, 68)
+    c.shadowBlur = 0
+  }
   if (h.banner) drawBanner(c, h.banner, time)
   if (h.secretToast && time - h.secretToast.t < 4) {
     const k = time - h.secretToast.t
@@ -259,7 +274,7 @@ export function drawHudOverlays(c: CanvasRenderingContext2D, w: World, h: HudSta
     c.fillText(h.secretToast.text, PW / 2, PH - 34)
     c.globalAlpha = 1
   }
-  if (h.specialHint > 0 && p.specialId && p.special >= p.specialCost) {
+  if (h.specialHint > 0 && !w.arcade && p.specialId && p.special >= p.specialCost) {
     c.globalAlpha = Math.min(1, h.specialHint)
     c.font = `700 12px ${T.fontHead}`
     c.textAlign = 'center'
@@ -331,4 +346,51 @@ function drawBanner(c: CanvasRenderingContext2D, b: { text: string; sub?: string
 /** Empty HUD column (title screen): same panel, no flight data. */
 export function drawHudIdle(c: CanvasRenderingContext2D) {
   c.drawImage(column(), HUD_X, 0, HUD_W, SCREEN_H)
+}
+
+/** Arcade column: score-attack readout (lives, bombs, power, graze, Rift energy) instead of shields and credits. */
+function drawArcadeHud(c: CanvasRenderingContext2D, w: World, h: HudState) {
+  const a = w.arcade!
+  const run = a.run
+  const x0 = HUD_X + 20, bw = HUD_W - 40, xr = x0 + bw
+  label(c, `Arcade · stage ${run.stage + 1} · ${h.mission.name}`, x0, 30, H.dim, 9)
+  c.fillStyle = 'rgba(255,255,255,0.1)'; c.fillRect(x0, 38, bw, 2)
+  c.fillStyle = T.ember; c.fillRect(x0, 38, bw * clamp(h.progress, 0, 1), 2)
+  label(c, 'Hi-score', x0, 62, H.faint, 8.5)
+  mono(c, Math.max(h.bank, w.score).toLocaleString('en-US'), xr, 63, 11, H.dim, 'right')
+  label(c, 'Score', x0, 84)
+  mono(c, w.score.toLocaleString('en-US'), xr, 98, 24, a.inRift ? '#ff6a6a' : H.text, 'right', 700)
+  if (a.inRift) label(c, 'Rift ×3', x0, 98, '#ff6a6a', 9)
+  let y = 130
+  label(c, 'Lives', x0, y)
+  for (let i = 0; i < Math.min(run.lives, 8); i++) { c.fillStyle = T.ember; c.beginPath(); c.moveTo(xr - i * 16, y - 9); c.lineTo(xr - i * 16 + 6, y + 2); c.lineTo(xr - i * 16 - 6, y + 2); c.closePath(); c.fill() }
+  y += 26
+  label(c, 'Bombs', x0, y)
+  for (let i = 0; i < Math.min(run.bombs, 8); i++) { c.fillStyle = '#76d6ff'; c.beginPath(); c.arc(xr - 4 - i * 16, y - 4, 5, 0, Math.PI * 2); c.fill() }
+  y += 30
+  label(c, 'Power', x0, y); mono(c, run.power >= 4 ? 'MAX' : run.power.toFixed(2), xr, y + 1, 12, '#ff6a5a', 'right', 700)
+  bar(c, x0, y + 6, bw, 6, run.power / 4, '#ff5a4a')
+  y += 30
+  const wp = ARCADE_WEAPONS.find((x) => x.id === run.weapon)!
+  label(c, 'Weapon', x0, y); mono(c, `${wp.letter} · ${wp.name}`, xr, y + 1, 12, wp.color, 'right', 700)
+  y += 24
+  label(c, 'Graze', x0, y); mono(c, `${run.graze}`, xr, y + 1, 12, H.text, 'right', 700)
+  y += 20
+  label(c, 'Point item', x0, y, H.faint, 8.5); mono(c, a.pointValue.toLocaleString('en-US'), xr, y + 1, 10, '#6fb8ff', 'right')
+  y += 30
+  // Rift: three segments; one full segment opens the way
+  label(c, a.inRift ? 'Rift — inside' : a.rift >= 34 ? 'Rift — ready [C]' : 'Rift', x0, y, a.inRift ? '#ff6a6a' : a.rift >= 34 ? T.ember : H.dim)
+  const seg = (bw - 8) / 3
+  for (let i = 0; i < 3; i++) {
+    const k = clamp(a.rift / 100 * 3 - i, 0, 1)
+    c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(x0 + i * (seg + 4), y + 7, seg, 9)
+    c.fillStyle = a.inRift ? '#ff4a5a' : k >= 1 ? '#c49bff' : '#7a62b0'
+    c.fillRect(x0 + i * (seg + 4), y + 7, seg * k, 9)
+  }
+  y += 40
+  c.fillStyle = H.line; c.fillRect(x0, y - 12, bw, 1)
+  label(c, 'Spells', x0, y); mono(c, `${run.captured} / ${run.spells}`, xr, y + 1, 11, H.text, 'right')
+  // controls reminder: the mode adds two verbs
+  label(c, 'Shift focus · X bomb · C rift', x0, SCREEN_H - 34, H.faint, 8)
+  label(c, 'Esc pause', x0, SCREEN_H - 14, H.faint, 8)
 }

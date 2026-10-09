@@ -98,6 +98,15 @@
   "score": 0.895,
   "xfade": 0.06
  },
+ "rift": {
+  "duration": 143.935,
+  "harmony": 1.0,
+  "loopEnd": 137.1603,
+  "loopStart": 60.3602,
+  "rhythm": 0.983,
+  "score": 1.016,
+  "xfade": 0.06
+ },
  "secret": {
   "duration": 123.402,
   "harmony": 1.0,

@@ -423,4 +423,6 @@ const ending: TrackSpec = {
 
 export const TRACKS: Record<TrackId, TrackSpec> = {
   title, hangar, m1, m2, m3, m4, m5, m6, m7, secret, boss, final_boss: finalBoss, ending,
+  // synth fallback for the recorded Rift theme: the boss score is the closest mood
+  rift: boss,
 }

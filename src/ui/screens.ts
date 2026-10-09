@@ -10,7 +10,7 @@ import { ITEM } from '../data/items'
 import { ORDER } from '../data/missions'
 import type { MenuAction } from '../core/input'
 
-const btn = (label: string, onClick: () => void, opts: { hint?: string; primary?: boolean; def?: boolean; danger?: boolean; small?: boolean } = {}) =>
+export const btn = (label: string, onClick: () => void, opts: { hint?: string; primary?: boolean; def?: boolean; danger?: boolean; small?: boolean } = {}) =>
   h('button', {
     class: `btn nav${opts.primary ? ' primary' : ''}${opts.danger ? ' danger' : ''}${opts.small ? ' small' : ''}`,
     'data-default': opts.def,
@@ -36,6 +36,7 @@ export function titleScreen(app: App): Screen {
       h('div', { class: 'menu' },
         canContinue ? btn('Continue', () => app.continueGame(), { hint: c!.finished ? 'campaign complete' : `mission ${Math.min(c!.next + 1, ORDER.length)} · ${fmt(c!.credits)}c`, primary: true, def: true }) : null,
         btn('New campaign', () => app.chooseDifficulty(), { primary: !canContinue, def: !canContinue }),
+        btn('Arcade', () => app.startArcade(), { hint: 'danmaku run · 5 stages' }),
         btn('Settings', () => app.openSettings()),
       ),
       h('div', { class: 'title-foot' }, 'Arrows / WASD move · Space / Z fire · X special · Shift precision · Esc pause', h('br'), 'Gamepad supported.'),
@@ -44,6 +45,7 @@ export function titleScreen(app: App): Screen {
       h('div', { class: 'kicker' }, 'Service record'),
       h('div', { class: 'rule' }),
       h('div', { class: 'stat-row' }, h('span', null, 'Best campaign score'), h('b', null, fmt(app.records.bestScore))),
+      h('div', { class: 'stat-row' }, h('span', null, 'Arcade high score'), h('b', null, fmt(app.records.arcadeBest))),
       h('div', { class: 'stat-row' }, h('span', null, 'Campaigns completed'), h('b', null, `${app.records.completedDifficulties.length}`)),
       h('div', { class: 'stat-row' }, h('span', null, 'Secrets ever found'), h('b', null, `${app.records.secretsEver.length}`)),
       c ? h('div', { class: 'stat-row' }, h('span', null, 'Current difficulty'), h('b', null, DIFFICULTIES[c.difficulty].name)) : null,

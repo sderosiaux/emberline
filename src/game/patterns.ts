@@ -5,6 +5,7 @@ import { TAU } from '../core/math'
 import { PH, PW } from './consts'
 import { sfxAt } from './fx'
 import { P, C } from '../render/particles'
+import { ARCADE } from './arcade'
 
 /** Shared bullet vocabulary for enemies and bosses. */
 
@@ -34,7 +35,11 @@ export function aimed(w: World, x: number, y: number, speed: number, count = 1, 
   fan(w, x, y, base, count, spread * (count - 1), speed, kind, dmg)
 }
 
+/** Arcade turns patterns into denser danmaku; single aimed shots stay single. */
+const dense = (w: World, n: number) => (w.arcade && n >= 3 ? Math.round(n * ARCADE.countMul) : n)
+
 export function fan(w: World, x: number, y: number, ang: number, count: number, totalSpread: number, speed: number, kind = BulletKind.Orb, dmg = 10) {
+  count = dense(w, count)
   for (let i = 0; i < count; i++) {
     const a = count === 1 ? ang : ang - totalSpread / 2 + (totalSpread * i) / (count - 1)
     w.fire(x, y, a, speed, kind, dmg)
@@ -44,6 +49,7 @@ export function fan(w: World, x: number, y: number, ang: number, count: number, 
 }
 
 export function ring(w: World, x: number, y: number, n: number, speed: number, offset = 0, kind = BulletKind.Orb, dmg = 10) {
+  n = dense(w, n)
   for (let i = 0; i < n; i++) w.fire(x, y, offset + (i / n) * TAU, speed, kind, dmg)
   flash(w, x, y, true)
   enemySfx(w, x, true)
@@ -55,7 +61,8 @@ export function spiral(w: World, e: Enemy, dt: number, rate: number, arms: numbe
   e.s.spT = (e.s.spT ?? 0) - dt * w.diff.fireRate
   if (e.s.spT > 0) return
   e.s.spT += 1 / rate
-  for (let i = 0; i < arms; i++) w.fire(e.x, e.y, e.s.spAng + (i / arms) * TAU, speed, kind)
+  const a = dense(w, arms)
+  for (let i = 0; i < a; i++) w.fire(e.x, e.y, e.s.spAng + (i / a) * TAU, speed, kind)
   enemySfx(w, e.x)
 }
 

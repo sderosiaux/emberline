@@ -358,6 +358,65 @@
     "shield_gen_down_e1.wav"
    ],
    "gain": 0.1844
+  },
+  "rift_enter": {
+   "files": [
+    "rift_enter_e1.wav"
+   ],
+   "gain": 0.1642
+  },
+  "rift_exit": {
+   "files": [
+    "rift_exit_e1.wav"
+   ],
+   "gain": 0.1642
+  },
+  "rift_ready": {
+   "files": [
+    "rift_ready_e1.wav"
+   ],
+   "gain": 0.205
+  },
+  "bomb": {
+   "files": [
+    "bomb_e1.wav"
+   ],
+   "gain": 0.7118
+  },
+  "spell_declare": {
+   "files": [
+    "spell_declare_e1.wav"
+   ],
+   "gain": 0.5087
+  },
+  "spell_capture": {
+   "files": [
+    "spell_capture_e1.wav"
+   ],
+   "gain": 0.1596
+  },
+  "graze": {
+   "files": [
+    "graze_e1.wav",
+    "graze_e2.wav",
+    "graze_e3.wav"
+   ],
+   "gain": 0.1051
+  },
+  "item_power": {
+   "files": [
+    "item_power_e1.wav",
+    "item_power_e2.wav"
+   ],
+   "gain": 0.1488
+  },
+  "item_point": {
+   "files": [
+    "item_point_e1.wav",
+    "item_point_e2.wav",
+    "item_point_e3.wav"
+   ],
+   "gain": 0.1156
   }
  },
  "loops": {

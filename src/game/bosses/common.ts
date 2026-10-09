@@ -37,12 +37,14 @@ export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], f
   for (const e of w.bossParts) { e.bossPart = true; e.noCull = true }
   root.s.ignoreGate = 1
   w.emit({ type: 'boss', name })
+  w.arcade?.nextSpell(w)
   if (!w.preview) audio.music.play(finalBoss ? 'final_boss' : 'boss', { fade: 1 })
   audio.music.setIntensity(3)
   const t0 = w.time
   const prior = root.onDeath
   root.onDeath = (ww, e) => {
     prior?.(ww, e)
+    ww.arcade?.finishSpell(ww, false)
     ww.stats.bossTime = ww.time - t0
     for (const p of ww.bossParts) if (!p.dead && p !== e) ww.kill(p, false)
     for (const b of ww.bullets.items) if (b.active) { ww.parts.spawn(P.Glow, b.x, b.y, 0, 0, 0.3, 8, 2, C.magenta); ww.bullets.kill(b) }
@@ -70,6 +72,7 @@ export function phaseShift(w: World, text?: string) {
   w.addShake(10)
   w.flashScreen = 0.25
   if (text) w.emit({ type: 'radio', who: 'CHOIR', text, tone: 'enemy' })
+  w.arcade?.nextSpell(w)
 }
 
 /** Living non-root parts with a given tag. */

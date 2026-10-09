@@ -50,6 +50,8 @@ export class Player {
   lowHullWarned = false
   /** Hold-to-fire state after input/AI. */
   firing = false
+  /** Precision/focus held: arcade weapons tighten into a concentrated stream. */
+  focus = false
   /** Autopilot for tests/demo: if set, overrides input. */
   ai: ((p: Player, w: World, dt: number) => { mx: number; my: number; fire: boolean; special: boolean; precision?: boolean }) | null = null
   deathTimer = 0
@@ -77,6 +79,7 @@ export class Player {
 
   /** Spend energy; returns false if not enough (weapons then skip the shot). */
   useEnergy(n: number): boolean {
+    if (this.w.arcade) return true // arcade: power items, not a reactor, set the firepower
     if (this.overclock > 0) return true
     if (this.energy >= n) { this.energy -= n; return true }
     this.starving = 0.25
@@ -89,6 +92,7 @@ export class Player {
   }
 
   hurt(dmg: number, hx: number, hy: number, continuous = false) {
+    if (this.w.arcade) { this.w.arcade.hit(this.w); return }
     if (!this.alive || this.w.god || this.phased || this.entering > 0) return
     if (this.invuln > 0 && (!continuous || this.invuln > 10)) return
     this.w.stats.damageTaken += dmg
@@ -154,6 +158,7 @@ export class Player {
       this.y = approach(this.y, PH - 90, 420 * dt)
       mx = 0; my = 0; spec = false
     }
+    this.focus = prec
     const sp = this.speed * (prec ? 0.45 : 1)
     const tvx = mx * sp, tvy = my * sp
     const acc = 5200
@@ -204,7 +209,10 @@ export class Player {
     }
 
     // special
-    if (spec && this.specialId && this.special >= this.specialCost && this.specialActive <= 0) {
+    if (w.arcade) {
+      if (spec) w.arcade.bomb(w)
+      if (input.rift && !this.ai) w.arcade.flip(w)
+    } else if (spec && this.specialId && this.special >= this.specialCost && this.specialActive <= 0) {
       this.special -= this.specialCost
       triggerSpecial(this, w, this.specialId)
     }

@@ -20,10 +20,11 @@ export interface Records {
   missionBest: Record<string, number>
   completedDifficulties: DifficultyId[]
   secretsEver: string[]
+  arcadeBest: number
 }
 
 export const DEFAULT_SETTINGS: Settings = { master: 0.8, music: 0.7, sfx: 0.8, shake: 'full', effects: 'high', alwaysFire: false, showFps: false, fpsCap: 60 }
-const DEFAULT_RECORDS: Records = { bestScore: 0, missionBest: {}, completedDifficulties: [], secretsEver: [] }
+const DEFAULT_RECORDS: Records = { bestScore: 0, missionBest: {}, completedDifficulties: [], secretsEver: [], arcadeBest: 0 }
 
 const K = { campaign: 'emberline.campaign.v1', settings: 'emberline.settings.v1', records: 'emberline.records.v1' }
 
