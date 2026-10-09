@@ -249,6 +249,24 @@ A = {
     prompt='A single long luminous crystal petal seen from above, NOT metal: translucent pale lavender, lilac and white '
            'crystal, faceted like a gemstone, pointed at both ends, with a glowing white light running along its central '
            'vein. Soft, ethereal, beautiful. Vertical. NO pink, NO magenta.'),
+
+  # ── missiles (drawn nose UP; the engine flame is drawn live by the renderer)
+  'enemy_missile': dict(
+    aspect='9:16', box=(12, 26), key='green', refs=[], tight=True, rot180=True,
+    prompt='A single small enemy guided missile seen from directly above, pointing straight UP: slim dark gunmetal '
+           'cylindrical body with panel seams and a thin hazard band, a glowing hot-pink warhead nose cone at the top, '
+           'four small swept tail fins at the bottom, a dark engine nozzle at the very bottom with NO flame. Vertical, narrow.'),
+  'shot_missile': dict(
+    aspect='3:4', box=(9, 17), key='green', refs=[], style='soft',
+    prompt='A single small stubby homing rocket, NOT a spaceship, seen from directly above, pointing straight UP. Its '
+           'length is only about THREE times its width. Ivory-white body with a bright orange pointed nose cone taking the '
+           'top third, a thin orange band, four short swept orange tail fins flaring out at the bottom, a dark engine '
+           'nozzle at the very bottom, NO flame. Small panel details and a soft metallic sheen. Centred, compact.'),
+  'shot_viper': dict(
+    aspect='3:4', box=(10, 19), key='green', refs=['art:shot_missile'], style='soft',
+    prompt='The same stubby homing rocket design as the reference image (same angle, pointing straight UP, same proportions), '
+           'but a heavier variant: warm peach-copper body, a deep red-orange nose cone, darker copper tail fins, a dark '
+           'nozzle at the bottom, NO flame. Centred, compact.'),
 }
 
 # Assets made from other generated art instead of a new generation: (operation, source asset).
@@ -378,7 +396,10 @@ def main():
             print(f'{n}: generating', flush=True)
             open(raw, 'wb').write(generate(n, spec))
         img = Image.open(raw)
-        out = fit(chroma_key(img, KEYS[spec['key']][0], spec.get('hue_clean', True)), spec['box'], spec.get('tight', False))
+        keyed = chroma_key(img, KEYS[spec['key']][0], spec.get('hue_clean', True))
+        # the model sometimes paints a pointed thing the wrong way round; fix the take instead of paying for another
+        if spec.get('rot180'): keyed = keyed.rotate(180)
+        out = fit(keyed, spec['box'], spec.get('tight', False))
         save(out, n)
         print(f'{n}: {img.size} -> {out.size}', flush=True)
     man = {}

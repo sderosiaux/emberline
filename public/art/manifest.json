@@ -159,6 +159,18 @@
   "w": 50,
   "h": 96
  },
+ "enemy_missile": {
+  "w": 12,
+  "h": 32
+ },
+ "shot_missile": {
+  "w": 9,
+  "h": 17
+ },
+ "shot_viper": {
+  "w": 10,
+  "h": 19
+ },
  "m2_tide_hull_l": {
   "w": 170,
   "h": 380

@@ -9,6 +9,7 @@ import { specialFx } from '../game/specials'
 import { Arcade, CAPSULE_CYCLE } from '../game/arcade'
 import { bossBounds } from '../game/bosses/common'
 import { drawZones, drawMechanicsOver } from '../game/bosses/raid'
+import { hasPainted } from './painted-art'
 import { PickupKind, BulletKind } from '../game/entities'
 import type { Enemy } from '../game/entities'
 import { TAU, clamp } from '../core/math'
@@ -441,8 +442,42 @@ function drawShots(c: CanvasRenderingContext2D, w: World) {
       drawSprite(c, sp, s.x, s.y, s.rot, 1, k > 0.7 ? (1 - k) / 0.3 : 1)
       continue
     }
+    if ((s.sprite === 'shot_missile' || s.sprite === 'shot_viper') && hasPainted(s.sprite)) {
+      // painted rocket has no flame: the engine burns live behind it
+      const dx = Math.sin(s.rot), dy = -Math.cos(s.rot)
+      engineFlame(c, s.x, s.y, dx, dy, sp.h * s.scale * 0.46, 8, 3.6, w.time * 34 + s.x, PLAYER_FLAME)
+    }
     drawSprite(c, sp, s.x, s.y, s.rot, s.scale)
   }
+}
+
+const ENEMY_FLAME = ['rgba(255,80,150,0.9)', 'rgba(255,200,120,0.95)']
+const PLAYER_FLAME = ['rgba(255,120,30,0.9)', 'rgba(255,245,200,0.95)']
+
+/** Enemy missile body: the painted rocket once it has loaded, else the old procedural one. */
+function missileArt() {
+  if (hasPainted('enemy_missile')) { const sp = getSprite('enemy_missile'); return { img: sp.img, w: sp.w, h: sp.h } }
+  const t = bulletTex(BulletKind.Missile)
+  return { img: t.img, w: t.w, h: t.h }
+}
+
+/**
+ * Flickering engine plume behind a rocket flying along (dx, dy): an outer coloured flame and a
+ * hot core, stretched along the exhaust and jittered every frame so it reads as burning.
+ */
+function engineFlame(c: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, back: number, len: number, wid: number, seed: number, cols: string[]) {
+  const flick = 0.75 + 0.35 * Math.abs(Math.sin(seed * 1.7)) + Math.random() * 0.15
+  const L = len * flick
+  const tx = x - dx * back, ty = y - dy * back
+  const a = Math.atan2(-dy, -dx)
+  c.save()
+  c.globalCompositeOperation = 'lighter'
+  c.translate(tx, ty)
+  c.rotate(a)
+  c.globalAlpha = 0.9
+  c.drawImage(glowTexture(cols[0], 64, 0.15), -L * 0.15, -wid, L * 1.3, wid * 2)
+  c.drawImage(glowTexture(cols[1], 64, 0.3), -L * 0.1, -wid * 0.45, L * 0.6, wid * 0.9)
+  c.restore()
 }
 
 function drawLines(c: CanvasRenderingContext2D, w: World) {
@@ -705,7 +740,13 @@ function drawBullets(c: CanvasRenderingContext2D, w: World) {
   c.globalCompositeOperation = 'lighter'
   for (let i = 0; i < items.length; i++) {
     const b = items[i]
-    if (!b.active || b.kind === BulletKind.Missile || (w.arcade && b.layer !== w.arcade.layer)) continue
+    if (!b.active || (w.arcade && b.layer !== w.arcade.layer)) continue
+    if (b.kind === BulletKind.Missile) {
+      const sp = Math.hypot(b.vx, b.vy) || 1
+      const mh = missileArt().h * b.scale
+      engineFlame(c, b.x, b.y, b.vx / sp, b.vy / sp, mh * 0.48, 10 + Math.min(16, sp * 0.06), 5.5, time * 30 + i, ENEMY_FLAME)
+      continue
+    }
     const pulse = 1 + 0.18 * Math.sin(time * 13 + i * 1.7)
     const rr = b.r * b.scale * 3.1 * pulse
     c.globalAlpha = b.age < b.arm ? 0.25 : 0.5
@@ -732,8 +773,22 @@ function drawBullets(c: CanvasRenderingContext2D, w: World) {
   for (let i = 0; i < items.length; i++) {
     const b = items[i]
     if (!b.active) continue
-    const t = bulletTex(b.kind)
     const ghost = !!w.arcade && b.layer !== w.arcade.layer
+    if (b.kind === BulletKind.Missile) {
+      // art is drawn nose-up: rotate so the nose leads (+π/2, not −π/2: the old texture flew tail-first)
+      const m = missileArt()
+      const a = Math.atan2(b.vy, b.vx) + Math.PI / 2
+      const cs = Math.cos(a), sn = Math.sin(a)
+      const mw = m.w * b.scale, mh = m.h * b.scale
+      if (ghost) c.globalAlpha = 0.2
+      c.save()
+      c.transform(cs, sn, -sn, cs, b.x, b.y)
+      c.drawImage(m.img, -mw / 2, -mh / 2, mw, mh)
+      c.restore()
+      c.globalAlpha = 1
+      continue
+    }
+    const t = bulletTex(b.kind)
     const breathe = ORBISH.has(b.kind) ? 1 + 0.07 * Math.sin(time * 16 + i * 1.7) : 1
     const s = b.scale * breathe * (b.age < 0.08 ? 0.5 + b.age * 6 : 1)
     const bw = t.w * s, bh = t.h * s
