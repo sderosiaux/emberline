@@ -92,11 +92,19 @@ S.update({
   # strategic camera pull-back
   'reveal_out': ('Cinematic camera pulling back to reveal a huge enemy fleet, deep rising sub whoosh with a tactical radar ping and a low ominous brass swell', 2.0, 1, 1.8),
   'reveal_in': ('Camera diving back into the action, fast descending air whoosh ending in a tight punchy thump', 1.0, 1, 0.8),
+  # boss mechanics (raid-style)
+  'cast_start': ('Giant machine boss begins charging a big attack, deep ominous mechanical whir rising with a low brass hit', 1.2, 1, 1.0),
+  'cast_kick': ('Boss channeling an interruptible spell, tense rising crystalline energy hum with a pulsing heartbeat', 1.5, 1, 1.3),
+  'interrupt': ('Spell interrupted, sharp glassy shatter with an electric snap and a satisfying metallic clang', 1.0, 1, 0.8),
+  'soak': ('Absorbing a huge energy impact with a shield, heavy muffled whump with a bright shimmering ring', 1.0, 1, 0.8),
+  'zone_boom': ('Ground eruption explosion, punchy rocky blast with debris crackle, short', 1.0, 3, 0.7),
+  'raid_warning': ('Urgent alarm stinger for a deadly boss attack, two-tone warning horn blast, short', 1.0, 1, 0.9),
 })
 # arcade sounds borrow the level of the closest existing sound so they slot into the mix
 REF = {'graze': 'hit_small', 'item_power': 'pickup_special', 'item_point': 'pickup_credit', 'rift_enter': 'special_phase',
        'rift_exit': 'special_phase', 'rift_ready': 'special_ready', 'bomb': 'special_nova', 'spell_declare': 'boss_phase', 'spell_capture': 'secret',
-       'reveal_out': 'boss_warning', 'reveal_in': 'special_phase'}
+       'reveal_out': 'boss_warning', 'reveal_in': 'special_phase',
+       'cast_start': 'boss_phase', 'cast_kick': 'boss_phase', 'interrupt': 'boss_part', 'soak': 'shield_hit', 'zone_boom': 'expl_medium', 'raid_warning': 'boss_warning'}
 
 LOOPS = {
   'beam': ('Continuous powerful energy beam hum, sustained searing laser drone, seamless loop', 3.0),

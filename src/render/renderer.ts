@@ -8,6 +8,7 @@ import { Sunline, Aegis, Lantern, Halo } from '../game/weapons'
 import { specialFx } from '../game/specials'
 import { Arcade, CAPSULE_CYCLE } from '../game/arcade'
 import { bossBounds } from '../game/bosses/common'
+import { drawZones, drawMechanicsOver } from '../game/bosses/raid'
 import { PickupKind, BulletKind } from '../game/entities'
 import type { Enemy } from '../game/entities'
 import { TAU, clamp } from '../core/math'
@@ -283,6 +284,7 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
   setSpriteTint(w.ambient)
   for (const e of ground) drawEnemy(c, w, e)
   setSpriteTint(null)
+  drawZones(c, w)
   for (const d of w.decor) if (d.above && hasSprite(d.sprite)) drawSprite(c, spr(d.sprite), d.x, d.y, d.rot, d.scale, d.alpha)
 
   // shadows of air units
@@ -313,6 +315,7 @@ export function drawWorld(c: CanvasRenderingContext2D, w: World, bg: Background 
   }
 
   for (const e of air) drawEnemy(c, w, e)
+  drawMechanicsOver(c, w)
 
   // player shots
   drawShots(c, w)

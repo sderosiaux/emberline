@@ -8,7 +8,7 @@ import { type Mixer, mtof } from './core'
 import { playNote, playPad, type SynthPreset } from './instruments'
 import { type Dst, fm, formant, noise, tone } from './synth'
 import type { Sample } from './samples'
-import type { ArcadeSfx, SfxName } from './types'
+import type { ArcadeSfx, RaidSfx, SfxName } from './types'
 
 export interface SfxCtx extends Dst {
   t: number
@@ -74,7 +74,7 @@ function notes(c: SfxCtx, list: [number, number, number][], P: SynthPreset, semi
   for (const [at, midi, len] of list) playNote(c.ctx, c.out, c.t + at, len, midi + semis, 1, P)
 }
 
-const BASE_SFX: Record<Exclude<SfxName, ArcadeSfx>, SfxDef> = {
+const BASE_SFX: Record<Exclude<SfxName, ArcadeSfx | RaidSfx>, SfxDef> = {
   // ------------------------------------------------ player weapons
   shot_pulse: { lvl: 2.5, cap: 4, gap: 0.035, prio: 1, jitter: 0.04, fn: (c) => {
     tone(c, c.t, { w: 'square', f: 900 * c.p, f2: 430 * c.p, dur: 0.07, vol: 0.075, flt: { type: 'lowpass', f: 3500 } })
@@ -487,4 +487,10 @@ export const SFX: Record<SfxName, SfxDef> = {
   item_point: { ...BASE_SFX.pickup_credit, gap: 0.025, cap: 4 },
   reveal_out: { ...BASE_SFX.boss_warning, gap: 1 },
   reveal_in: { ...BASE_SFX.special_phase, gap: 1 },
+  cast_start: { ...BASE_SFX.boss_phase, gap: 0.5 },
+  cast_kick: { ...BASE_SFX.enemy_laser_charge, gap: 0.5 },
+  interrupt: { ...BASE_SFX.shield_down, gap: 0.5 },
+  soak: { ...BASE_SFX.shield_hit, gap: 0.3 },
+  zone_boom: { ...BASE_SFX.expl_medium, gap: 0.08, cap: 4 },
+  raid_warning: { ...BASE_SFX.boss_warning, gap: 1 },
 }

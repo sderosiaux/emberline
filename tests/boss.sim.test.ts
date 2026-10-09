@@ -16,13 +16,19 @@ it.skipIf(!process.env.BOSS)('boss time-to-kill', () => {
   }
   for (const [name, l] of Object.entries(builds)) {
     const w = new World(l, DIFFICULTIES.gunship)
-    w.god = true
+    // no god mode: mechanics must be survivable by the autopilot; deaths are reported, not fatal
     w.hpScale = 1 + 0.22 * idx
     w.player.ai = autopilot(1)
     const L = new LevelScript(MISSIONS[id]); MISSIONS[id].script(L)
     const r = new LevelRunner(L, w)
-    let t = 0
-    while (t < 900 && !w.flags.has('boss_dead')) { r.update(1 / 30); w.update(1 / 30); t += 1 / 30 }
-    process.stderr.write(`${id} ${name}: boss ${w.stats.bossTime.toFixed(0)}s (total ${t.toFixed(0)}s)\n`)
+    let t = 0, deaths = 0, raid = { ...w.raid.stats }, dmg0 = -1
+    while (t < 900 && !w.flags.has('boss_dead')) {
+      r.update(1 / 30); w.update(1 / 30); t += 1 / 30
+      if (w.boss && dmg0 < 0) dmg0 = w.stats.damageTaken
+      if (w.boss && !w.boss.dead) raid = { ...w.raid.stats }
+      if (!w.player.alive || w.player.hull <= 0) { deaths++; w.player.hull = w.player.maxHull; w.player.alive = true; w.player.invuln = 2 }
+    }
+    const hit = dmg0 < 0 ? 0 : w.stats.damageTaken - dmg0
+    process.stderr.write(`${id} ${name}: boss ${w.stats.bossTime.toFixed(0)}s (total ${t.toFixed(0)}s) dmg taken in fight ${hit.toFixed(0)} deaths ${deaths} kicks ${raid.kicks}/${raid.kicks + raid.kickMisses} soaks ${raid.soaks}/${raid.soaks + raid.soakMisses}\n`)
   }
 }, 600_000)

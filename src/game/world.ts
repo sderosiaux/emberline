@@ -9,6 +9,7 @@ import type { Difficulty, Loadout } from './campaign'
 import { rand, TAU, clamp } from '../core/math'
 import { audio } from '../audio/audio'
 import { Camera, type RevealOpts } from './camera'
+import { Raid, type WarnTone } from './bosses/raid'
 
 export interface MissionStats {
   kills: number
@@ -30,6 +31,7 @@ export interface MissionStats {
 export type GameEvent =
   | { type: 'radio'; who: string; text: string; tone?: 'ally' | 'enemy' | 'odd' }
   | { type: 'banner'; text: string; sub?: string; low?: boolean }
+  | { type: 'warn'; text: string; tone: WarnTone }
   | { type: 'secret'; id: string; text: string }
   | { type: 'core'; id: string }
   | { type: 'boss'; name: string }
@@ -114,6 +116,8 @@ export class World {
   hitstop = 0
   /** Strategic pull-back camera (render-only, plus enemies holding fire while wide). */
   cam = new Camera()
+  /** Boss mechanics: casts, kicks, zones, pulls, enrage. */
+  raid = new Raid()
   /** Playfield rectangle: the field itself, or the whole view during a playable pull-back. */
   bounds = { x0: 0, y0: 0, x1: PW, y1: PH }
   score = 0
@@ -266,8 +270,9 @@ export class World {
       if (Math.random() < 0.4) this.parts.spawn(P.Glow, hx, hy, 0, 0, 0.08, 7, 2, C.cyan)
       return 0
     }
-    const d = dmg * e.armor * (this.arcade?.inRift ? ARCADE.riftDamage : 1)
+    const d = dmg * e.armor * (this.arcade?.inRift ? ARCADE.riftDamage : 1) * this.raid.dmgMul(e)
     e.hp -= d
+    this.raid.onDamage(this, e, d)
     e.flash = e.maxHp > 400 ? Math.max(e.flash, 0.45) : 1
     if (this.arcade) perkOnHit(this, e)
     e.hitThisFrame = true
@@ -370,6 +375,7 @@ export class World {
     this.player.update(dt)
     this.updateShots(dt)
     this.updateEnemies(dt)
+    this.raid.update(this, dt)
     this.updateBullets(dt)
     this.updateLasers(dt)
     this.collideShots()

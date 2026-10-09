@@ -31,7 +31,10 @@ export interface BossCtl {
  * plays the warning and switches music. When `root` dies the fight ends with a
  * chained destruction sequence and a credit shower.
  */
-export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], finalBoss = false) {
+export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], finalBoss = false, enrage = 0) {
+  w.raid.reset()
+  // the clock starts once the entrance is over
+  if (enrage > 0) w.raid.enrageAt = w.time + enrage + 4
   w.boss = root
   w.bossName = name
   w.bossParts = [root, ...parts]
@@ -49,6 +52,7 @@ export function startBoss(w: World, root: Enemy, name: string, parts: Enemy[], f
   root.onDeath = (ww, e) => {
     prior?.(ww, e)
     ww.arcade?.finishSpell(ww, false)
+    ww.raid.reset()
     ww.stats.bossTime = ww.time - t0
     for (const p of ww.bossParts) if (!p.dead && p !== e) ww.kill(p, false)
     for (const b of ww.bullets.items) if (b.active) { ww.parts.spawn(P.Glow, b.x, b.y, 0, 0, 0.3, 8, 2, C.magenta); ww.bullets.kill(b) }

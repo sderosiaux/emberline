@@ -6,3 +6,4 @@ playtest-output
 .claude
 __pycache__
 tools/music/raw
+tools/art-raw/

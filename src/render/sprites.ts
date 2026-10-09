@@ -16,14 +16,16 @@ export interface Sprite {
   shadow: HTMLCanvasElement
 }
 
-interface Def { w: number; h: number; paint: Painter; shadow: boolean }
+interface Def { w: number; h: number; paint: Painter; shadow: boolean; ss?: number }
 
 const defs = new Map<string, Def>()
 const cache = new Map<string, Sprite>()
 
-export function defineSprite(key: string, w: number, h: number, paint: Painter, shadow = false) {
-  defs.set(key, { w, h, paint, shadow })
+/** `ss`: pixels per logical pixel for this sprite (painted art defaults to SUPERSAMPLE; detailed images want more). */
+export function defineSprite(key: string, w: number, h: number, paint: Painter, shadow = false, ss?: number) {
+  defs.set(key, { w, h, paint, shadow, ss })
   cache.delete(key)
+  for (const k of tintCache.keys()) if (k.startsWith(`${key}|`)) tintCache.delete(k)
 }
 
 export function hasSprite(key: string) { return defs.has(key) }
@@ -46,7 +48,7 @@ export function getSprite(key: string): Sprite {
     d = { w: 24, h: 24, shadow: false, paint: (c) => { c.fillStyle = '#ff00ff'; c.fillRect(2, 2, 20, 20); c.fillStyle = '#000'; c.fillRect(6, 6, 12, 12) } }
     defs.set(key, d)
   }
-  const s = SUPERSAMPLE
+  const s = d.ss ?? SUPERSAMPLE
   const img = makeCanvas(d.w * s, d.h * s)
   const ctx = img.getContext('2d')!
   ctx.scale(s, s)

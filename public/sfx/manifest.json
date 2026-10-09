@@ -429,6 +429,44 @@
     "reveal_out_e1.wav"
    ],
    "gain": 0.2092
+  },
+  "soak": {
+   "files": [
+    "soak_e1.wav"
+   ],
+   "gain": 0.245
+  },
+  "cast_kick": {
+   "files": [
+    "cast_kick_e1.wav"
+   ],
+   "gain": 0.5087
+  },
+  "cast_start": {
+   "files": [
+    "cast_start_e1.wav"
+   ],
+   "gain": 0.5087
+  },
+  "interrupt": {
+   "files": [
+    "interrupt_e1.wav"
+   ],
+   "gain": 0.469
+  },
+  "raid_warning": {
+   "files": [
+    "raid_warning_e1.wav"
+   ],
+   "gain": 0.2092
+  },
+  "zone_boom": {
+   "files": [
+    "zone_boom_e1.wav",
+    "zone_boom_e2.wav",
+    "zone_boom_e3.wav"
+   ],
+   "gain": 0.8138
   }
  },
  "loops": {

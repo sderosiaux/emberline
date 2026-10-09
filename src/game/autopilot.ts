@@ -27,6 +27,9 @@ export function autopilot(skill = 1) {
       }
       aimX = best ? best.x : PW / 2 + Math.sin(w.time * 0.5) * 120
       aimY = best ? best.y : 0
+      // an interruptible cast: everything goes into the weak point
+      const kick = w.raid.cast?.kick
+      if (kick && !kick.target.dead) { aimX = kick.target.x; aimY = kick.target.y }
     }
     const dirs = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]
     let bestDir = dirs[0], bestScore = -Infinity
@@ -61,6 +64,15 @@ export function autopilot(skill = 1) {
         // graded so candidate moves that head out of the beam win over staying inside
         if (d < wr) danger += 600 + (wr - d) * 25
       }
+      // boss mechanics: get out of blasts and pools, get into soaks, fight pulls
+      let mech = 0
+      for (const z of w.raid.zones) {
+        const d = Math.hypot(nx - z.x, ny - z.y)
+        if (z.kind === 'soak') mech += d < z.r * 0.7 ? 400 : -d * 1.5
+        else if (d < z.r + 16 && (z.live || z.t > z.delay - 0.9)) mech -= 900 + (z.r + 16 - d) * 20
+      }
+      for (const q of w.raid.pulls) mech += Math.hypot(nx - q.x, ny - q.y) * 2
+      danger -= mech
       const align = -Math.abs(nx - aimX) * 0.8
       // short-range guns need to close in; everything else hangs back
       const reach = REACH[p.loadout.front.id] ?? 9999

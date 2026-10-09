@@ -9,6 +9,10 @@ export type SfxName =
   | 'ui_move' | 'ui_select' | 'ui_back' | 'ui_buy' | 'ui_sell' | 'ui_deny' | 'ui_upgrade'
   | 'mission_complete' | 'game_over' | 'radio' | 'player_death' | 'chain_reaction' | 'shield_gen_down'
   | ArcadeSfx
+  | RaidSfx
+
+/** Boss mechanics: cast starts, interrupts, soaks, ground eruptions, raid alerts. */
+export type RaidSfx = 'cast_start' | 'cast_kick' | 'interrupt' | 'soak' | 'zone_boom' | 'raid_warning'
 
 /** Arcade-mode sounds: sample-only, they reuse a nearby synth recipe as fallback. */
 export type ArcadeSfx = 'graze' | 'rift_enter' | 'rift_exit' | 'rift_ready' | 'bomb' | 'spell_declare' | 'spell_capture' | 'item_power' | 'item_point' | 'reveal_out' | 'reveal_in'

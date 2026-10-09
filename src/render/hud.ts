@@ -6,6 +6,7 @@ import { PW, PH, HUD_X, HUD_W, SCREEN_H } from '../game/consts'
 import { clamp } from '../core/math'
 import { ARCADE_WEAPONS } from '../game/arcade'
 import { PERK } from '../game/perks'
+import type { WarnTone } from '../game/bosses/raid'
 
 export interface RadioLine { who: string; text: string; tone: 'ally' | 'enemy' | 'odd'; t: number }
 export interface HudState {
@@ -19,6 +20,8 @@ export interface HudState {
   showFps: boolean
   secretToast: { text: string; t: number } | null
   specialHint: number
+  /** Raid warning: big centred alert for boss mechanics (Deadly Boss Mods style). */
+  warn: { text: string; tone: WarnTone; t: number } | null
 }
 
 /**
@@ -259,6 +262,7 @@ export function drawHudOverlays(c: CanvasRenderingContext2D, w: World, h: HudSta
     c.shadowBlur = 0
   }
   if (h.banner) drawBanner(c, h.banner, time)
+  if (h.warn) drawWarn(c, h.warn, time)
   if (h.secretToast && time - h.secretToast.t < 4) {
     const k = time - h.secretToast.t
     c.globalAlpha = k > 3.4 ? (4 - k) / 0.6 : Math.min(1, k * 4)
@@ -311,8 +315,79 @@ function drawBossBar(c: CanvasRenderingContext2D, w: World) {
   c.fillRect(x - 2, y + 11, bw + 4, 8)
   c.fillStyle = 'rgba(255,255,255,0.3)'
   c.fillRect(x, y + 13, bw * bossGhost, 4)
-  c.fillStyle = '#ff3b4a'
+  c.fillStyle = w.raid.vulnT > 0 ? '#ffd23b' : '#ff3b4a'
   c.fillRect(x, y + 13, bw * k, 4)
+  const r = w.raid
+  // enrage timer, right of the name
+  if (r.enrageAt > 0) {
+    const left = r.enrageAt - w.time
+    c.font = `700 9px ${T.fontMono}`
+    c.textAlign = 'right'
+    c.fillStyle = r.enraged ? '#ff4040' : left < 20 ? '#ff9a6a' : 'rgba(255,255,255,0.6)'
+    const m = Math.floor(Math.max(0, left) / 60), s = Math.floor(Math.max(0, left) % 60)
+    c.fillText(r.enraged ? 'ENRAGED' : `ENRAGE ${m}:${String(s).padStart(2, '0')}`, x + bw, y + 7)
+  }
+  if (r.vulnT > 0) {
+    c.font = `700 9px ${T.fontHead}`
+    c.textAlign = 'left'
+    c.fillStyle = '#ffd23b'
+    c.fillText(`VULNERABLE ${r.vulnT.toFixed(0)}s`, x, y + 7)
+  }
+  // cast bar
+  const cast = r.cast
+  if (cast) {
+    const cy = y + 26, cw = bw * 0.7, cx = (PW - cw) / 2
+    const kk = Math.min(1, cast.t / cast.time)
+    const kick = cast.kick
+    c.fillStyle = 'rgba(10,10,16,0.75)'
+    c.fillRect(cx - 2, cy - 2, cw + 4, kick ? 24 : 16)
+    c.fillStyle = kick ? '#3fb8ff' : '#ff8a2a'
+    c.fillRect(cx, cy, cw * kk, 12)
+    c.font = `700 9px ${T.fontHead}`
+    c.textAlign = 'center'
+    c.letterSpacing = '1.5px'
+    c.fillStyle = '#ffffff'
+    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 3
+    c.fillText(cast.name.toUpperCase(), PW / 2, cy + 9)
+    c.shadowBlur = 0
+    c.letterSpacing = '0px'
+    if (kick) {
+      // interrupt meter: damage landed on the weak point vs what it takes
+      const kp = Math.min(1, kick.dealt / kick.need)
+      c.fillStyle = 'rgba(255,255,255,0.15)'
+      c.fillRect(cx, cy + 15, cw, 5)
+      c.fillStyle = '#7ff0ff'
+      c.fillRect(cx, cy + 15, cw * kp, 5)
+      c.font = `700 8px ${T.fontHead}`
+      c.textAlign = 'right'
+      c.fillStyle = '#bff6ff'
+      c.fillText('INTERRUPT', cx - 6, cy + 20)
+    }
+  }
+}
+
+/** Big centred alert, short and loud: the one line a boss mechanic needs you to read. */
+function drawWarn(c: CanvasRenderingContext2D, wn: { text: string; tone: WarnTone; t: number }, time: number) {
+  const age = time - wn.t
+  const dur = 2.2
+  if (age > dur) return
+  const a = age > dur - 0.4 ? (dur - age) / 0.4 : 1
+  const pop = age < 0.12 ? 1 + (1 - age / 0.12) * 0.35 : 1
+  const col = wn.tone === 'good' ? '#7dffb0' : wn.tone === 'kick' ? '#7ff0ff' : '#ff5a3c'
+  c.save()
+  c.globalAlpha = a
+  c.translate(PW / 2, PH * 0.46)
+  c.scale(pop, pop)
+  c.font = `800 22px ${T.fontHead}`
+  c.textAlign = 'center'
+  c.letterSpacing = '3px'
+  c.lineWidth = 5
+  c.strokeStyle = 'rgba(0,0,0,0.75)'
+  c.strokeText(wn.text.toUpperCase(), 0, 0)
+  c.fillStyle = col
+  c.fillText(wn.text.toUpperCase(), 0, 0)
+  c.restore()
+  c.letterSpacing = '0px'
 }
 
 function drawBanner(c: CanvasRenderingContext2D, b: { text: string; sub?: string; low?: boolean; t: number }, time: number) {

@@ -21,6 +21,7 @@ import { registerFxArt } from './render/fx-art'
 import { drawRef } from './data/enemies'
 import { getSprite, drawSprite } from './render/sprites'
 import { App } from './app'
+import { loadPaintedArt } from './render/painted-art'
 
 applyCssTokens(document.documentElement)
 registerArt()
@@ -32,4 +33,6 @@ initLaserTextures()
 registerFxArt()
 drawRef.sprite = (ctx, key, x, y, rot, scale, alpha, flash) => drawSprite(ctx, getSprite(key), x, y, rot, scale, alpha, flash)
 
+// painted boss art streams in behind the title screen; bosses use procedural art until it lands
+void loadPaintedArt()
 document.fonts.ready.then(() => new App())

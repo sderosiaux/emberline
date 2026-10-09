@@ -66,7 +66,7 @@ export class Session {
     this.lastHull = this.world.player.hull
     this.hud = {
       mission, radio: [], banner: { text: mission.name, sub: `Mission ${mission.num}`, t: 0 }, progress: 0,
-      bank: campaign?.credits ?? 0, fps: 60, showFps: false, secretToast: null, specialHint: 0,
+      bank: campaign?.credits ?? 0, fps: 60, showFps: false, secretToast: null, specialHint: 0, warn: null,
     }
     audio.music.play(mission.track, { fade: 1.5 })
     audio.music.setIntensity(2)
@@ -104,7 +104,8 @@ export class Session {
           this.hud.banner = { text: 'Warning', sub: ev.name, low: w.cam.busy, t: w.time }
           audio.sfx('boss_warning')
           break
-        case 'bossDown': break
+        case 'bossDown': this.world.raid.reset(); break
+        case 'warn': this.hud.warn = { text: ev.text, tone: ev.tone, t: w.time }; break
         case 'warp': this.warp = ev.to; break
         case 'dead': if (this.state === 'play') { this.state = 'lost'; audio.music.stop(2) } break
         case 'complete': break
